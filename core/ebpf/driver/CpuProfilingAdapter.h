@@ -28,7 +28,7 @@ namespace ebpf {
 
 #define LOAD_PROFILING_FUNC_ADDR(funcName)                                     \
     ({                                                                         \
-        void *funcPtr = mLibProfiler->LoadMethod(#funcName, loadErr);          \
+        void *funcPtr = tmp_lib->LoadMethod(#funcName, loadErr);               \
         if (funcPtr == NULL) {                                                 \
             LOG_ERROR(sLogger,                                                 \
                       ("[CpuProfilingAdapter] load profiling method",          \
@@ -38,7 +38,7 @@ namespace ebpf {
     })
 
 #define REGISTER_PROFILING_FUNC(enumName, funcName)                            \
-    mFunc[static_cast<int>(enumName)] = LOAD_PROFILING_FUNC_ADDR(funcName)
+    mFuncs[static_cast<int>(enumName)] = LOAD_PROFILING_FUNC_ADDR(funcName)
 
 class CpuProfilingAdapter {
 public:
@@ -68,11 +68,11 @@ public:
     bool EnableSystemProfiling() {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
-        void *f = mFuncs(static_cast<int>(
-            livetrace_funcs::LIVETRACE_ENABLE_SYSTEM_PROFILING));
+        void *f = mFuncs[static_cast<int>(
+            livetrace_funcs::LIVETRACE_ENABLE_SYSTEM_PROFILING)];
         assert(f != nullptr);
         auto func = (enable_system_profiling_func)f;
         func();
@@ -82,11 +82,11 @@ public:
     bool DisableSymbolizer() {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
-        void *f = mFuncs(
-            static_cast<int>(livetrace_funcs::LIVETRACE_DISABLE_SYMBOLIZER));
+        void *f = mFuncs[static_cast<int>(
+            livetrace_funcs::LIVETRACE_DISABLE_SYMBOLIZER)];
         assert(f != nullptr);
         auto func = (disable_symbolizer_func)f;
         func();
@@ -96,7 +96,7 @@ public:
     Profiler *CreateProfiler() {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return nullptr;
         }
         void *f = mFuncs[static_cast<int>(
@@ -109,7 +109,7 @@ public:
     bool DestroyProfiler(Profiler *profiler) {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
         void *f = mFuncs[static_cast<int>(
@@ -123,7 +123,7 @@ public:
     int32_t ProfilerCtrl(Profiler *profiler, int op, const char *pids) {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return -1;
         }
         void *f =
@@ -136,7 +136,7 @@ public:
     bool ProfilerRead(Profiler *profiler, profiler_read_cb_func cb) {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
         void *f =
@@ -151,7 +151,7 @@ public:
                              profiler_read_heatmap_cb_func cb) {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
         void *f = mFuncs[static_cast<int>(
@@ -165,7 +165,7 @@ public:
     bool ProfilerReadBytes(Profiler *profiler, profiler_read_bytes_cb_func cb) {
         if (!loadDynamicLib(mProfilerLibName)) {
             LOG_ERROR(sLogger,
-                      ("[CpuProfilingAdapter] dynamic lib not loaded"));
+                      ("[CpuProfilingAdapter] dynamic lib not loaded", ""));
             return false;
         }
         void *f = mFuncs[static_cast<int>(
@@ -250,8 +250,12 @@ private:
 
     std::atomic_bool mInited = false;
     std::string mBinaryPath;
-    std::unique_ptr<DynamicLibHelper> mLibProfiler = nullptr;
+    std::unique_ptr<DynamicLibLoader> mLibProfiler = nullptr;
     std::array<void *, (int)livetrace_funcs::LIVETRACE_FUNC_MAX> mFuncs = {};
+
+#ifdef APSARA_UNIT_TEST_MAIN
+    friend class CpuProfilingAdapterUnittest;
+#endif
 };
 
 } // namespace ebpf
