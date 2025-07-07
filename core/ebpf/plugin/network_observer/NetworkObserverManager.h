@@ -64,7 +64,7 @@ public:
                            moodycamel::BlockingConcurrentQueue<std::shared_ptr<CommonEvent>>& queue,
                            const PluginMetricManagerPtr& metricManager);
 
-    int Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override;
+    int Init(const PluginOptions& options) override;
 
     int Destroy() override;
 
@@ -91,20 +91,20 @@ public:
     std::array<size_t, 2> GenerateAggKeyForNetMetric(const std::shared_ptr<AbstractRecord>&);
 
     std::unique_ptr<PluginConfig> GeneratePluginConfig(
-        [[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override {
+        [[maybe_unused]] const PluginOptions& options) override {
         auto ebpfConfig = std::make_unique<PluginConfig>();
         ebpfConfig->mPluginType = PluginType::NETWORK_OBSERVE;
         return ebpfConfig;
     }
 
-    int Update([[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override;
+    int Update([[maybe_unused]] const PluginOptions& options) override;
 
     int Suspend() override {
         mSuspendFlag = true;
         return 0;
     }
 
-    int Resume(const std::variant<SecurityOptions*, ObserverNetworkOption*>&) override {
+    int Resume(const PluginOptions&) override {
         mSuspendFlag = false;
         return 0;
     }

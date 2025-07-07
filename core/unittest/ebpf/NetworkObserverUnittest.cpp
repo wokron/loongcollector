@@ -109,7 +109,7 @@ void NetworkObserverManagerUnittest::TestInitialization() {
     options.mEnableCids = {"container1", "container2"};
     options.mDisableCids = {"container3"};
 
-    int result = mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    int result = mManager->Init(PluginOptions(&options));
     EXPECT_EQ(result, 0);
     EXPECT_EQ(mManager->GetPluginType(), PluginType::NETWORK_OBSERVE);
 }
@@ -119,7 +119,7 @@ void NetworkObserverManagerUnittest::TestEventHandling() {
     EXPECT_NE(mManager, nullptr);
     ObserverNetworkOption options;
     options.mEnableProtocols = {"HTTP"};
-    mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    mManager->Init(PluginOptions(&options));
 
     struct conn_ctrl_event_t connectEvent = {};
     connectEvent.conn_id.fd = 1;
@@ -227,7 +227,7 @@ void NetworkObserverManagerUnittest::TestDataEventProcessing() {
     // auto mManager = CreateManager();
     ObserverNetworkOption options;
     options.mEnableProtocols = {"HTTP"};
-    mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    mManager->Init(PluginOptions(&options));
     mManager->Destroy();
 
     auto statsEvent = CreateConnStatsEvent();
@@ -281,7 +281,7 @@ void NetworkObserverManagerUnittest::TestWhitelistManagement() {
     // auto mManager = CreateManager();
     ObserverNetworkOption options;
     options.mEnableProtocols = {"HTTP"};
-    mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    mManager->Init(PluginOptions(&options));
 
     std::vector<std::string> enableCids = {"container1", "container2"};
     std::vector<std::string> disableCids;
@@ -300,7 +300,7 @@ void NetworkObserverManagerUnittest::TestPerfBufferOperations() {
     // auto mManager = CreateManager();
     ObserverNetworkOption options;
     options.mEnableProtocols = {"HTTP"};
-    mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    mManager->Init(PluginOptions(&options));
 
     int result = mManager->PollPerfBuffer();
     EXPECT_EQ(result, 0);
@@ -319,7 +319,7 @@ void NetworkObserverManagerUnittest::TestRecordProcessing() {
     options.mEnableMetric = true;
     options.mEnableSpan = true;
     options.mSampleRate = 1;
-    mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    mManager->Init(PluginOptions(&options));
 
     auto podInfo = std::make_shared<K8sPodInfo>();
     podInfo->mContainerIds = {"1", "2"};
@@ -412,7 +412,7 @@ void NetworkObserverManagerUnittest::TestRollbackProcessing() {
         options.mEnableLog = true;
         options.mEnableMetric = true;
         options.mEnableSpan = true;
-        mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        mManager->Init(PluginOptions(&options));
 
         auto podInfo = std::make_shared<K8sPodInfo>();
         podInfo->mContainerIds = {"1", "2"};
@@ -499,7 +499,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
         ObserverNetworkOption options;
         options.mEnableProtocols = {"http"};
         std::cout << magic_enum::enum_name(support_proto_e::ProtoHTTP) << std::endl;
-        mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        mManager->Init(PluginOptions(&options));
         APSARA_TEST_TRUE(mManager->mPreviousOpt != nullptr);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableProtocols.size(), 1UL);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableProtocols[0], "http");
@@ -510,13 +510,13 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
 
         options.mEnableProtocols = {"MySQL", "Redis", "Dubbo"};
         // std::vector<std::string> protocols = {"MySQL", "Redis", "Dubbo"};
-        int result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        int result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 0UL);
 
         // protocols = {"HTTP", "MySQL"};
         options.mEnableProtocols = {"HTTP", "MySQL"};
-        result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 1UL);
         APSARA_TEST_TRUE(ProtocolParserManager::GetInstance().mParsers.count(support_proto_e::ProtoHTTP) > 0);
@@ -524,7 +524,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
 
         // protocols.clear();
         options.mEnableProtocols = {};
-        result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 0UL);
         mManager->Destroy();
@@ -538,7 +538,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
         options.mEnableLog = false;
         options.mEnableMetric = true;
         options.mEnableSpan = true;
-        mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        mManager->Init(PluginOptions(&options));
         APSARA_TEST_TRUE(mManager->mPreviousOpt != nullptr);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableProtocols.size(), 1UL);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableProtocols[0], "http");
@@ -555,7 +555,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
         options.mEnableMetric = false;
         options.mEnableSpan = false;
         // std::vector<std::string> protocols = {"MySQL", "Redis", "Dubbo"};
-        int result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        int result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 0UL);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableLog, true);
@@ -567,7 +567,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
         options.mEnableLog = true;
         options.mEnableMetric = true;
         options.mEnableSpan = false;
-        result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 1UL);
         APSARA_TEST_TRUE(ProtocolParserManager::GetInstance().mParsers.count(support_proto_e::ProtoHTTP) > 0);
@@ -578,7 +578,7 @@ void NetworkObserverManagerUnittest::TestConfigUpdate() {
 
         // protocols.clear();
         options.mEnableProtocols = {};
-        result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        result = mManager->Update(PluginOptions(&options));
         APSARA_TEST_EQUAL(result, 0);
         APSARA_TEST_EQUAL(ProtocolParserManager::GetInstance().mParsers.size(), 0UL);
         APSARA_TEST_EQUAL(mManager->mPreviousOpt->mEnableLog, true);
@@ -592,7 +592,7 @@ void NetworkObserverManagerUnittest::TestPluginLifecycle() {
 
     ObserverNetworkOption options;
     options.mEnableProtocols = {"HTTP"};
-    int result = mManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    int result = mManager->Init(PluginOptions(&options));
     EXPECT_EQ(result, 0);
 
     // case1: udpate
@@ -607,7 +607,7 @@ void NetworkObserverManagerUnittest::TestPluginLifecycle() {
     // case3: stop and re-run
 
     options.mEnableProtocols = {"HTTP", "MySQL"};
-    result = mManager->Update(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    result = mManager->Update(PluginOptions(&options));
     EXPECT_EQ(result, 0);
 
     result = mManager->Destroy();

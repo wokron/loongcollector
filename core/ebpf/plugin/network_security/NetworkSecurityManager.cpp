@@ -238,7 +238,7 @@ int NetworkSecurityManager::SendEvents() {
     return 0;
 }
 
-int NetworkSecurityManager::Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) {
+int NetworkSecurityManager::Init(const PluginOptions& options) {
     const auto* securityOpts = std::get_if<SecurityOptions*>(&options);
     if (!securityOpts) {
         LOG_ERROR(sLogger, ("Invalid options type for NetworkSecurityManager", ""));

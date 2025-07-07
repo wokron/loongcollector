@@ -52,7 +52,7 @@ ProcessSecurityManager::ProcessSecurityManager(const std::shared_ptr<ProcessCach
 }
 
 int ProcessSecurityManager::Init(
-    [[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) {
+    [[maybe_unused]] const PluginOptions& options) {
     // just set timer ...
     // register base manager ...
     mInited = true;

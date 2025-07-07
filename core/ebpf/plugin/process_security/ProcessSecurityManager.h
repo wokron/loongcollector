@@ -50,7 +50,7 @@ public:
     }
 
     ~ProcessSecurityManager() = default;
-    int Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override;
+    int Init(const PluginOptions& options) override;
     int Destroy() override;
 
     PluginType GetPluginType() override { return PluginType::PROCESS_SECURITY; }
@@ -67,13 +67,13 @@ public:
     }
 
     std::unique_ptr<PluginConfig> GeneratePluginConfig(
-        [[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override {
+        [[maybe_unused]] const PluginOptions& options) override {
         auto ebpfConfig = std::make_unique<PluginConfig>();
         ebpfConfig->mPluginType = PluginType::PROCESS_SECURITY;
         return ebpfConfig;
     }
 
-    int Update([[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override {
+    int Update([[maybe_unused]] const PluginOptions& options) override {
         // do nothing ...
         return 0;
     }

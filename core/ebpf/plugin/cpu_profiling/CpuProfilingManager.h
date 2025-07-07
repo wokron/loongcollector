@@ -34,7 +34,7 @@ public:
         return std::make_shared<CpuProfilingManager>(processCacheManager, eBPFAdapter, queue, metricMgr);
     }
 
-    int Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override;
+    int Init(const PluginOptions& options) override;
     int Destroy() override;
 
     int HandleEvent(const std::shared_ptr<CommonEvent>& event) override { return 0; }
@@ -47,7 +47,7 @@ public:
     PluginType GetPluginType() override { return PluginType::CPU_PROFILING; }
 
     std::unique_ptr<PluginConfig>
-    GeneratePluginConfig([[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override {
+    GeneratePluginConfig([[maybe_unused]] const PluginOptions& options) override {
         auto pc = std::make_unique<PluginConfig>();
         pc->mPluginType = PluginType::CPU_PROFILING;
         CpuProfilingConfig config;

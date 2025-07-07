@@ -1111,7 +1111,7 @@ int GuessContainerIdOffset() {
 }
 
 int NetworkObserverManager::Update(
-    [[maybe_unused]] const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) {
+    [[maybe_unused]] const PluginOptions& options) {
     auto* opt = std::get<ObserverNetworkOption*>(options);
 
     // diff opt
@@ -1155,7 +1155,7 @@ int NetworkObserverManager::Update(
     return 0;
 }
 
-int NetworkObserverManager::Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) {
+int NetworkObserverManager::Init(const PluginOptions& options) {
     if (mInited) {
         return 0;
     }

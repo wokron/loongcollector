@@ -44,7 +44,7 @@ public:
         return std::make_shared<NetworkSecurityManager>(processCacheManager, eBPFAdapter, queue, metricMgr);
     }
 
-    int Init(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override;
+    int Init(const PluginOptions& options) override;
     int Destroy() override;
 
     void RecordNetworkEvent(tcp_data_t* event);
@@ -62,7 +62,7 @@ public:
     }
 
     std::unique_ptr<PluginConfig>
-    GeneratePluginConfig(const std::variant<SecurityOptions*, ObserverNetworkOption*>& options) override {
+    GeneratePluginConfig(const PluginOptions& options) override {
         std::unique_ptr<PluginConfig> pc = std::make_unique<PluginConfig>();
         pc->mPluginType = PluginType::NETWORK_SECURITY;
         NetworkSecurityConfig config;

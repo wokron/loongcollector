@@ -93,13 +93,13 @@ void ManagerUnittest::TestProcessSecurityManagerBasic() {
     auto manager = std::make_shared<ProcessSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
 
     SecurityOptions options;
-    APSARA_TEST_EQUAL(manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Init(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Suspend(), 0);
     APSARA_TEST_FALSE(manager->IsRunning());
 
-    APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -109,7 +109,7 @@ void ManagerUnittest::TestProcessSecurityManagerBasic() {
 void ManagerUnittest::TestProcessSecurityManagerEventHandling() {
     auto manager = std::make_shared<ProcessSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
     SecurityOptions options;
-    manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->Init(PluginOptions(&options));
 
     auto execveEvent = std::make_shared<ProcessEvent>(1234, 5678, KernelEventType::PROCESS_EXECVE_EVENT, 799);
     APSARA_TEST_EQUAL(manager->HandleEvent(execveEvent), 0);
@@ -127,13 +127,13 @@ void ManagerUnittest::TestProcessSecurityManagerEventHandling() {
 //     auto manager = std::make_shared<FileSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
 
 //     SecurityOptions options;
-//     APSARA_TEST_EQUAL(manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+//     APSARA_TEST_EQUAL(manager->Init(PluginOptions(&options)), 0);
 //     APSARA_TEST_TRUE(manager->IsRunning());
 
 //     APSARA_TEST_EQUAL(manager->Suspend(), 0);
 //     APSARA_TEST_FALSE(manager->IsRunning());
 
-//     APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+//     APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
 //     APSARA_TEST_TRUE(manager->IsRunning());
 
 //     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -143,7 +143,7 @@ void ManagerUnittest::TestProcessSecurityManagerEventHandling() {
 // void ManagerUnittest::TestFileSecurityManagerEventHandling() {
 //     auto manager = std::make_shared<FileSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
 //     SecurityOptions options;
-//     manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+//     manager->Init(PluginOptions(&options));
 
 //     auto permissionEvent = std::make_shared<FileEvent>(1234,
 //                                                        5678,
@@ -176,8 +176,8 @@ void ManagerUnittest::TestManagerConcurrency() {
     // nullptr);
 
     SecurityOptions options;
-    processManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
-    // fileManager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    processManager->Init(PluginOptions(&options));
+    // fileManager->Init(PluginOptions(&options));
 
     std::vector<std::thread> threads;
     for (int i = 0; i < 5; ++i) {
@@ -213,7 +213,7 @@ void ManagerUnittest::TestManagerErrorHandling() {
     APSARA_TEST_NOT_EQUAL(manager->HandleEvent(nullptr), 0);
 
     SecurityOptions options;
-    manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->Init(PluginOptions(&options));
     manager->Suspend();
     APSARA_TEST_FALSE(manager->IsRunning());
     APSARA_TEST_EQUAL(manager->HandleEvent(event), 0);
@@ -226,7 +226,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
 
     // 测试初始化
     SecurityOptions options;
-    APSARA_TEST_EQUAL(manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Init(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     // 测试暂停
@@ -234,7 +234,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
     APSARA_TEST_FALSE(manager->IsRunning());
 
     // 测试恢复
-    APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -244,7 +244,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
 void ManagerUnittest::TestNetworkSecurityManagerEventHandling() {
     auto manager = std::make_shared<NetworkSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
     SecurityOptions options;
-    manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->Init(PluginOptions(&options));
 
     // 测试TCP连接事件
     auto connectEvent
@@ -300,7 +300,7 @@ void ManagerUnittest::TestNetworkSecurityManagerEventHandling() {
 void ManagerUnittest::TestNetworkSecurityManagerAggregation() {
     auto manager = std::make_shared<NetworkSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
     SecurityOptions options;
-    manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->Init(PluginOptions(&options));
 
     // 创建多个相关的网络事件
     std::vector<std::shared_ptr<NetworkEvent>> events;
@@ -348,7 +348,7 @@ void ManagerUnittest::TestNetworkSecurityManagerAggregation() {
 void ManagerUnittest::TestProcessSecurityManagerAggregation() {
     auto manager = std::make_shared<ProcessSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
     SecurityOptions options;
-    manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->Init(PluginOptions(&options));
 
     // 创建多个相关的进程事件
     std::vector<std::shared_ptr<ProcessEvent>> events;
@@ -389,7 +389,7 @@ void ManagerUnittest::TestProcessSecurityManagerAggregation() {
 // void ManagerUnittest::TestFileSecurityManagerAggregation() {
 //     auto manager = std::make_shared<FileSecurityManager>(mProcessCacheManager, mEBPFAdapter, mEventQueue, nullptr);
 //     SecurityOptions options;
-//     manager->Init(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+//     manager->Init(PluginOptions(&options));
 
 //     // 创建多个相关的文件事件
 //     std::vector<std::shared_ptr<FileEvent>> events;
