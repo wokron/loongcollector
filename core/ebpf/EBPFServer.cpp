@@ -36,6 +36,7 @@
 #include "plugin/network_observer/NetworkObserverManager.h"
 #include "plugin/network_security/NetworkSecurityManager.h"
 #include "plugin/process_security/ProcessSecurityManager.h"
+#include "plugin/cpu_profiling/CpuProfilingManager.h"
 
 DEFINE_FLAG_INT64(kernel_min_version_for_ebpf,
                   "the minimum kernel version that supported eBPF normal running, 4.19.0.0 -> 4019000000",
@@ -59,7 +60,8 @@ bool EnvManager::IsSupportedEnv(PluginType type) {
             break;
         case PluginType::FILE_SECURITY:
         case PluginType::NETWORK_SECURITY:
-        case PluginType::PROCESS_SECURITY: {
+        case PluginType::PROCESS_SECURITY:
+        case PluginType::CPU_PROFILING: {
             status = mArchSupport && mBTFSupport;
             break;
         }
@@ -277,7 +279,7 @@ bool EBPFServer::startPluginInternal(const std::string& pipelineName,
                                      const std::variant<SecurityOptions*, ObserverNetworkOption*>& options,
                                      const PluginMetricManagerPtr& metricManager) {
     bool isNeedProcessCache = false;
-    if (type != PluginType::NETWORK_OBSERVE) {
+    if (type != PluginType::NETWORK_OBSERVE && type != PluginType::CPU_PROFILING) {
         isNeedProcessCache = true;
     }
     auto& pluginMgr = getPluginState(type).mManager;
@@ -329,6 +331,17 @@ bool EBPFServer::startPluginInternal(const std::string& pipelineName,
                     auto mgr = FileSecurityManager::Create(
                         mProcessCacheManager, mEBPFAdapter, mCommonEventQueue, mRetryableEventCache);
                     mgr->SetMetrics(mRecvKernelEventsTotal, mLossKernelEventsTotal);
+                    pluginMgr = mgr;
+                }
+                break;
+            }
+
+            case PluginType::CPU_PROFILING: {
+                if (!pluginMgr) {
+                    auto mgr = CpuProfilingManager::Create(
+                        mProcessCacheManager, mEBPFAdapter, mCommonEventQueue, metricManager);
+                    // TODO: SetMetrics()
+                    // mgr->SetMetrics(mRecvKernelEventsTotal, mLossKernelEventsTotal);
                     pluginMgr = mgr;
                 }
                 break;
