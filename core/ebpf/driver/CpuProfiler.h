@@ -153,8 +153,8 @@ private:
 
     std::unordered_set<pid_t> mPids;
     std::shared_ptr<CpuProfilingAdapter> mProfilingAdapter;
-    CpuProfilingAdapter::Profiler *mProfiler;
-    CpuProfilingAdapter::profiler_read_cb_func mHandler;
+    CpuProfilingAdapter::Profiler *mProfiler = nullptr;
+    CpuProfilingAdapter::profiler_read_cb_func mHandler = nullptr;
 };
 
 } // namespace ebpf

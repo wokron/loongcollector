@@ -35,6 +35,7 @@
 #include "plugin/network_observer/NetworkObserverManager.h"
 #include "plugin/network_security/NetworkSecurityManager.h"
 #include "plugin/process_security/ProcessSecurityManager.h"
+#include "plugin/cpu_profiling/CpuProfilingManager.h"
 
 DEFINE_FLAG_INT64(kernel_min_version_for_ebpf,
                   "the minimum kernel version that supported eBPF normal running, 4.19.0.0 -> 4019000000",
@@ -58,7 +59,8 @@ bool EnvManager::IsSupportedEnv(PluginType type) {
             break;
         case PluginType::FILE_SECURITY:
         case PluginType::NETWORK_SECURITY:
-        case PluginType::PROCESS_SECURITY: {
+        case PluginType::PROCESS_SECURITY:
+        case PluginType::CPU_PROFILING: {
             status = mArchSupport && mBTFSupport;
             break;
         }
@@ -291,7 +293,7 @@ bool EBPFServer::startPluginInternal(const std::string& pipelineName,
         return false;
     }
 
-    if (type != PluginType::NETWORK_OBSERVE) {
+    if (type != PluginType::NETWORK_OBSERVE && type != PluginType::CPU_PROFILING) {
         if (mProcessCacheManager->Init()) {
             LOG_INFO(sLogger, ("ProcessCacheManager initialization", "succeeded"));
         } else {
@@ -339,6 +341,15 @@ bool EBPFServer::startPluginInternal(const std::string& pipelineName,
         //     }
         //     break;
         // }
+
+        case PluginType::CPU_PROFILING: {
+            if (!pluginMgr) {
+                pluginMgr = CpuProfilingManager::Create(
+                    mProcessCacheManager, mEBPFAdapter, mCommonEventQueue, metricManager);
+            }
+            break;
+        }
+
         default:
             LOG_ERROR(sLogger, ("unknown plugin type", int(type)));
             return false;
