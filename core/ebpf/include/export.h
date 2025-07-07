@@ -75,6 +75,7 @@ enum class PluginType {
     PROCESS_SECURITY,
     FILE_SECURITY,
     NETWORK_SECURITY,
+    CPU_PROFILING,
     MAX,
 };
 
@@ -152,6 +153,13 @@ struct FileSecurityConfig {
     bool operator==(const FileSecurityConfig& other) const { return mOptions == other.mOptions; }
 };
 
+using CpuProfilingHandler = void (*)(unsigned int, const char *, const char *, unsigned int);
+
+struct CpuProfilingConfig {
+    std::vector<pid_t> mPids;
+    CpuProfilingHandler mHandler;
+};
+
 enum class eBPFLogType {
     NAMI_LOG_TYPE_WARN = 0,
     NAMI_LOG_TYPE_INFO,
@@ -161,7 +169,7 @@ enum class eBPFLogType {
 struct PluginConfig {
     PluginType mPluginType;
     // log control
-    std::variant<NetworkObserveConfig, ProcessConfig, NetworkSecurityConfig, FileSecurityConfig> mConfig;
+    std::variant<NetworkObserveConfig, ProcessConfig, NetworkSecurityConfig, FileSecurityConfig, CpuProfilingConfig> mConfig;
 };
 
 } // namespace logtail::ebpf

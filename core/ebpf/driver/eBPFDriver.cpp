@@ -33,6 +33,7 @@ extern "C" {
 
 #include "BPFWrapper.h"
 #include "FileFilter.h"
+#include "ebpf/driver/CpuProfiler.h"
 #include "Log.h"
 #include "NetworkFilter.h"
 #include "common/magic_enum.hpp"
@@ -74,6 +75,8 @@ void UpdatePluginPerfBuffers(logtail::ebpf::PluginType type, std::vector<void*> 
 }
 
 std::shared_ptr<logtail::ebpf::BPFWrapper<security_bpf>> gWrapper = logtail::ebpf::BPFWrapper<security_bpf>::Create();
+std::shared_ptr<logtail::ebpf::CpuProfiler> gCpuProfiler = std::make_shared<logtail::ebpf::CpuProfiler>(logtail::ebpf::CpuProfilingAdapter::Create());
+
 void SetCoolBpfConfig(int32_t opt, int32_t value) {
     int32_t* params[] = {&value};
     int32_t paramsLen[] = {4};
@@ -369,6 +372,21 @@ int start_plugin(logtail::ebpf::PluginConfig* arg) {
                      "process security: DynamicAttachBPFObject success\n");
             break;
         }
+        case logtail::ebpf::PluginType::CPU_PROFILING: {
+            auto* config = std::get_if<logtail::ebpf::CpuProfilingConfig>(&arg->mConfig);
+            assert(config != nullptr);
+
+            bool ok;
+            ok = gCpuProfiler->UpdatePids(std::unordered_set<pid_t>(config->mPids.begin(), config->mPids.end()));
+            if (!ok) {
+                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
+                         "cpu profiling: UpdatePids failed\n");
+                return kErrDriverInternal;
+            }
+
+            gCpuProfiler->RegisterPollHandler(config->mHandler);
+            break;
+        }
         default: {
             EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
                      "[start plugin] unknown plugin type, please check. \n");
@@ -380,6 +398,9 @@ int start_plugin(logtail::ebpf::PluginConfig* arg) {
 int poll_plugin_pbs(logtail::ebpf::PluginType type, int32_t max_events, int32_t* stop_flag, int timeout_ms) {
     if (type == logtail::ebpf::PluginType::NETWORK_OBSERVE) {
         return ebpf_poll_events(max_events, stop_flag, timeout_ms);
+    } else if (type == logtail::ebpf::PluginType::CPU_PROFILING) {
+        auto r = gCpuProfiler->Poll();
+        return static_cast<int>(r);
     }
     // find pbs
     std::vector<void*> pbs = gPluginPbs.at(static_cast<size_t>(type));
@@ -514,6 +535,21 @@ int update_plugin(logtail::ebpf::PluginConfig* arg) {
             }
             break;
         }
+        case logtail::ebpf::PluginType::CPU_PROFILING: {
+            auto* config = std::get_if<logtail::ebpf::CpuProfilingConfig>(&arg->mConfig);
+            assert(config != nullptr);
+
+            bool ok;
+            ok = gCpuProfiler->UpdatePids(std::unordered_set<pid_t>(config->mPids.begin(), config->mPids.end()));
+            if (!ok) {
+                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
+                         "cpu profiling: UpdatePids failed\n");
+                return kErrDriverInternal;
+            }
+
+            gCpuProfiler->RegisterPollHandler(config->mHandler);
+            break;
+        }
         default:
             EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
                      "[update plugin] %s plugin type not supported.\n",
@@ -606,6 +642,10 @@ int stop_plugin(logtail::ebpf::PluginType pluginType) {
             DeletePerfBuffers(pluginType);
             break;
         }
+        case logtail::ebpf::PluginType::CPU_PROFILING: {
+            gCpuProfiler->Stop();
+            break;
+        }
         default: {
             EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
                      "[stop plugin] unknown plugin type, please check. \n");
@@ -647,6 +687,15 @@ int suspend_plugin(logtail::ebpf::PluginType pluginType) {
             break;
         }
         case logtail::ebpf::PluginType::PROCESS_SECURITY: {
+            break;
+        }
+        case logtail::ebpf::PluginType::CPU_PROFILING: {
+            auto ok = gCpuProfiler->Suspend();
+            if (!ok) {
+                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
+                         "[suspend plugin] cpu profiling: suspend failed\n");
+                return kErrDriverInternal;
+            }
             break;
         }
         default: {
