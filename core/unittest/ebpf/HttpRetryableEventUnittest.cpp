@@ -150,7 +150,7 @@ void HttpRetryableEventUnittest::TestConnStatsEventRetryProcess() {
         CollectionPipelineContext ctx;
         ctx.SetConfigName("test-config-networkobserver");
         ctx.SetProcessQueueKey(1);
-        mManager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        mManager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
         auto podInfo = std::make_shared<K8sPodInfo>();
         podInfo->mContainerIds = {"1", "2"};
@@ -266,7 +266,7 @@ void HttpRetryableEventUnittest::TestK8sMetaRetryProcess() {
         CollectionPipelineContext ctx;
         ctx.SetConfigName("test-config-networkobserver");
         ctx.SetProcessQueueKey(1);
-        mManager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        mManager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
         K8sMetadata::GetInstance().mContainerCache.clear();
         K8sMetadata::GetInstance().mIpCache.clear();
