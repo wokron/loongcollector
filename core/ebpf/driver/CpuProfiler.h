@@ -30,9 +30,9 @@ public:
     ~CpuProfiler() { Stop(); }
 
     bool Suspend() {
-        auto profiler = GetProfiler();
+        auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] GetProfiler failed", ""));
+            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
             return false;
         }
 
@@ -41,7 +41,7 @@ public:
             return true;
         }
 
-        std::string pidsToRemove = PidsToString(toRemove);
+        std::string pidsToRemove = pidsToString(toRemove);
         auto r = mProfilingAdapter->ProfilerCtrl(profiler, kRemove,
                                                  pidsToRemove.c_str());
         assert(r == 0);
@@ -62,25 +62,25 @@ public:
     }
 
     bool UpdatePids(const std::unordered_set<uint32_t> &newPids) {
-        auto profiler = GetProfiler();
+        auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] GetProfiler failed", ""));
+            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
             return false;
         }
 
         std::unordered_set<uint32_t> toAdd, toRemove;
-        CompareSets(newPids, toAdd, toRemove);
+        compareSets(newPids, toAdd, toRemove);
 
         if (toAdd.empty() && toRemove.empty()) {
             return true; // No changes
         }
 
-        std::string pidsToAdd = PidsToString(toAdd);
+        std::string pidsToAdd = pidsToString(toAdd);
         auto r =
             mProfilingAdapter->ProfilerCtrl(profiler, kAdd, pidsToAdd.c_str());
         assert(r == 0);
 
-        std::string pidsToRemove = PidsToString(toRemove);
+        std::string pidsToRemove = pidsToString(toRemove);
         mProfilingAdapter->ProfilerCtrl(profiler, kRemove,
                                         pidsToRemove.c_str());
         assert(r == 0);
@@ -96,9 +96,9 @@ public:
     }
 
     bool Poll() {
-        auto profiler = GetProfiler();
+        auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] GetProfiler failed", ""));
+            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
             return false;
         }
 
@@ -112,7 +112,7 @@ public:
     }
 
 private:
-    std::string PidsToString(const std::unordered_set<uint32_t> &pids) {
+    std::string pidsToString(const std::unordered_set<uint32_t> &pids) {
         std::string result;
         for (const auto &pid : pids) {
             if (!result.empty()) {
@@ -123,7 +123,7 @@ private:
         return result;
     }
 
-    void CompareSets(const std::unordered_set<uint32_t> &newPids,
+    void compareSets(const std::unordered_set<uint32_t> &newPids,
                      std::unordered_set<uint32_t> &toAdd,
                      std::unordered_set<uint32_t> &toRemove) {
         for (const auto &pid : newPids) {
@@ -138,7 +138,7 @@ private:
         }
     }
 
-    CpuProfilingAdapter::Profiler *GetProfiler() {
+    CpuProfilingAdapter::Profiler *getProfiler() {
         mProfilingAdapter->Init();
         if (mProfiler == nullptr) {
             mProfiler = mProfilingAdapter->CreateProfiler();
