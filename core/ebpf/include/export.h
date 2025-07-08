@@ -156,7 +156,7 @@ struct FileSecurityConfig {
 using CpuProfilingHandler = void (*)(unsigned int, const char *, const char *, unsigned int);
 
 struct CpuProfilingConfig {
-    std::vector<pid_t> mPids;
+    std::vector<uint32_t> mPids;
     CpuProfilingHandler mHandler;
 };
 

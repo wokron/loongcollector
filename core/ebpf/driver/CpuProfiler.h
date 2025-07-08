@@ -61,14 +61,14 @@ public:
         mHandler = nullptr;
     }
 
-    bool UpdatePids(const std::unordered_set<pid_t> &newPids) {
+    bool UpdatePids(const std::unordered_set<uint32_t> &newPids) {
         auto profiler = GetProfiler();
         if (profiler == nullptr) {
             LOG_ERROR(sLogger, ("[CpuProfiler] GetProfiler failed", ""));
             return false;
         }
 
-        std::unordered_set<pid_t> toAdd, toRemove;
+        std::unordered_set<uint32_t> toAdd, toRemove;
         CompareSets(newPids, toAdd, toRemove);
 
         if (toAdd.empty() && toRemove.empty()) {
@@ -112,7 +112,7 @@ public:
     }
 
 private:
-    std::string PidsToString(const std::unordered_set<pid_t> &pids) {
+    std::string PidsToString(const std::unordered_set<uint32_t> &pids) {
         std::string result;
         for (const auto &pid : pids) {
             if (!result.empty()) {
@@ -123,9 +123,9 @@ private:
         return result;
     }
 
-    void CompareSets(const std::unordered_set<pid_t> &newPids,
-                     std::unordered_set<pid_t> &toAdd,
-                     std::unordered_set<pid_t> &toRemove) {
+    void CompareSets(const std::unordered_set<uint32_t> &newPids,
+                     std::unordered_set<uint32_t> &toAdd,
+                     std::unordered_set<uint32_t> &toRemove) {
         for (const auto &pid : newPids) {
             if (mPids.find(pid) == mPids.end()) {
                 toAdd.insert(pid);
@@ -151,7 +151,7 @@ private:
 
     static constexpr int kAdd = 1, kRemove = 0;
 
-    std::unordered_set<pid_t> mPids;
+    std::unordered_set<uint32_t> mPids;
     std::shared_ptr<CpuProfilingAdapter> mProfilingAdapter;
     CpuProfilingAdapter::Profiler *mProfiler = nullptr;
     CpuProfilingAdapter::profiler_read_cb_func mHandler = nullptr;

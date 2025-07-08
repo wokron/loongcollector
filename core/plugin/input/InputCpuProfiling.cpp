@@ -22,8 +22,9 @@ const std::string InputCpuProfiling::sName = "input_cpu_profiling";
 
 bool InputCpuProfiling::Init(const Json::Value &config,
                              Json::Value &optionalGoPipeline) {
-    // TODO: Initialize the CPU profiling input plugin
-    return true;
+    // TODO: add metrics
+
+    return mCpuProfilingOption.Init(config, mContext, sName);
 }
 
 bool InputCpuProfiling::Start() {
@@ -34,7 +35,7 @@ bool InputCpuProfiling::Start() {
     }
     return ebpf::EBPFServer::GetInstance()->EnablePlugin(
         mContext->GetConfigName(), mIndex,
-        logtail::ebpf::PluginType::CPU_PROFILING, mContext, (logtail::ebpf::SecurityOptions*)nullptr, nullptr);
+        logtail::ebpf::PluginType::CPU_PROFILING, mContext, &mCpuProfilingOption, nullptr);
 }
 
 bool InputCpuProfiling::Stop(bool isPipelineRemoving) {

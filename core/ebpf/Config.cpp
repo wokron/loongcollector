@@ -544,6 +544,25 @@ bool SecurityOptions::Init(SecurityProbeType probeType,
     return true;
 }
 
+bool CpuProfilingOption::Init(const Json::Value& config,
+                              const CollectionPipelineContext* mContext,
+                              const std::string& sName) {
+    std::string errorMsg;
+
+    if (!GetOptionalListFilterParam<uint32_t>(config, "Pids", mPids, errorMsg)) {
+        PARAM_WARNING_IGNORE(mContext->GetLogger(),
+                             mContext->GetAlarm(),
+                             errorMsg,
+                             sName,
+                             mContext->GetConfigName(),
+                             mContext->GetProjectName(),
+                             mContext->GetLogstoreName(),
+                             mContext->GetRegion());
+    }
+
+    return true;
+}
+
 //////
 void eBPFAdminConfig::LoadEbpfConfig(const Json::Value& confJson) {
     // receive_event_chan_cap (Optional)
