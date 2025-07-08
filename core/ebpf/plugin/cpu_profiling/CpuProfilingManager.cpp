@@ -24,15 +24,20 @@ CpuProfilingManager::CpuProfilingManager(
     const PluginMetricManagerPtr &metricManager)
     : AbstractManager(base, eBPFAdapter, queue, metricManager) {}
 
-int CpuProfilingManager::Init(
-    const std::variant<SecurityOptions *, ObserverNetworkOption *> &options) {
-
+int CpuProfilingManager::Init(const PluginOptions &options) {
+    auto* profilingOptsPtr = std::get_if<CpuProfilingOption*>(&options);
+    if (!profilingOptsPtr) {
+        LOG_ERROR(sLogger, ("Invalid options for CPU Profiling Manager", ""));
+        return -1;
+    }
+    auto& profilingOpts = *profilingOptsPtr;
+    
     mInited = true;
 
     std::unique_ptr<PluginConfig> pc = std::make_unique<PluginConfig>();
     pc->mPluginType = PluginType::CPU_PROFILING;
     CpuProfilingConfig config;
-    config.mPids = {1}; // TODO: replace with actual pids
+    config.mPids = profilingOpts->mPids;
     config.mHandler = [](uint pid, const char *comm, const char *symbol,
                          uint cnt) {
         LOG_INFO(sLogger, ("CPU Profiling Event", "")("pid", pid)("comm", comm)(
@@ -58,7 +63,7 @@ void CpuProfilingManager::RecordProfilingEvent(uint pid, const char *comm,
     logEvent->SetContentNoCopy("comm", comm);
     logEvent->SetContentNoCopy("symbol", symbol);
     logEvent->SetContentNoCopy("cnt", std::to_string(cnt));
- 
+
     {
         std::lock_guard lk(mContextMutex);
         if (this->mPipelineCtx == nullptr) {

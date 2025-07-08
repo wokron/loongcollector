@@ -17,6 +17,7 @@
 #include <string>
 
 #include "collection_pipeline/plugin/interface/Input.h"
+#include "ebpf/Config.h"
 
 namespace logtail
 {
@@ -30,6 +31,8 @@ public:
     bool Start() override;
     bool Stop(bool isPipelineRemoving) override;
     bool SupportAck() const override { return true; }
+
+    ebpf::CpuProfilingOption mCpuProfilingOption;
 };
 
 } // namespace logtail

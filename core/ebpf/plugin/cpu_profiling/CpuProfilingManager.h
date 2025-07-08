@@ -51,8 +51,9 @@ public:
         auto pc = std::make_unique<PluginConfig>();
         pc->mPluginType = PluginType::CPU_PROFILING;
         CpuProfilingConfig config;
-        config.mPids = {1}; // TODO: replace with actual pids
-        config.mHandler = nullptr; // TODO: replace with actual handler
+        auto& opts = std::get<CpuProfilingOption*>(options);
+        config.mPids = opts->mPids;
+        config.mHandler = nullptr; // do not change handler
         pc->mConfig = std::move(config);
         return pc;
     }
