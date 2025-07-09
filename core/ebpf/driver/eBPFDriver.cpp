@@ -75,7 +75,7 @@ void UpdatePluginPerfBuffers(logtail::ebpf::PluginType type, std::vector<void*> 
 }
 
 std::shared_ptr<logtail::ebpf::BPFWrapper<security_bpf>> gWrapper = logtail::ebpf::BPFWrapper<security_bpf>::Create();
-std::shared_ptr<logtail::ebpf::CpuProfiler> gCpuProfiler = std::make_shared<logtail::ebpf::CpuProfiler>(logtail::ebpf::CpuProfilingAdapter::Create());
+std::shared_ptr<logtail::ebpf::CpuProfiler> gCpuProfiler = std::make_shared<logtail::ebpf::CpuProfiler>();
 
 void SetCoolBpfConfig(int32_t opt, int32_t value) {
     int32_t* params[] = {&value};
