@@ -153,11 +153,12 @@ struct FileSecurityConfig {
     bool operator==(const FileSecurityConfig& other) const { return mOptions == other.mOptions; }
 };
 
-using CpuProfilingHandler = void (*)(unsigned int, const char *, const char *, unsigned int);
+using CpuProfilingHandler = void (*)(uint32_t pid, char const *comm, char const *stack, uint32_t cnt, void *ctx);
 
 struct CpuProfilingConfig {
     std::vector<uint32_t> mPids;
     CpuProfilingHandler mHandler;
+    void *mCtx;
 };
 
 enum class eBPFLogType {

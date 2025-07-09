@@ -86,8 +86,9 @@ public:
         return true;
     }
 
-    void RegisterPollHandler(livetrace_profiler_read_cb_t handler) {
+    void RegisterPollHandler(livetrace_profiler_read_cb_t handler, void *ctx) {
         mHandler = handler;
+        mCtx = ctx;
     }
 
     bool Poll() {
@@ -102,7 +103,7 @@ public:
             return false;
         }
 
-        livetrace_profiler_read(profiler, mHandler);
+        livetrace_profiler_read(profiler, mHandler, mCtx);
         return true;
     }
 
@@ -145,6 +146,7 @@ private:
     std::unordered_set<uint32_t> mPids;
     Profiler *mProfiler = nullptr;
     livetrace_profiler_read_cb_t mHandler = nullptr;
+    void *mCtx = nullptr;
 };
 
 } // namespace ebpf

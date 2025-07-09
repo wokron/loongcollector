@@ -25,27 +25,31 @@ CpuProfilingManager::CpuProfilingManager(
     : AbstractManager(base, eBPFAdapter, queue, metricManager) {}
 
 int CpuProfilingManager::Init(const PluginOptions &options) {
-    auto* profilingOptsPtr = std::get_if<CpuProfilingOption*>(&options);
+    auto *profilingOptsPtr = std::get_if<CpuProfilingOption *>(&options);
     if (!profilingOptsPtr) {
         LOG_ERROR(sLogger, ("Invalid options for CPU Profiling Manager", ""));
         return -1;
     }
-    auto& profilingOpts = *profilingOptsPtr;
-    
+    auto &profilingOpts = *profilingOptsPtr;
+
     mInited = true;
 
     std::unique_ptr<PluginConfig> pc = std::make_unique<PluginConfig>();
     pc->mPluginType = PluginType::CPU_PROFILING;
     CpuProfilingConfig config;
     config.mPids = profilingOpts->mPids;
-    config.mHandler = [](uint pid, const char *comm, const char *symbol,
-                         uint cnt) {
-        LOG_INFO(sLogger, ("CPU Profiling Event", "")("pid", pid)("comm", comm)(
-                              "symbol", symbol)("cnt", cnt));
-    }; // TODO: replace with actual handler, support *ctx
+    config.mHandler = [](uint32_t pid, char const *comm, char const *stack,
+                         uint32_t cnt, void *ctx) {
+        assert(ctx != nullptr);
+        auto *self = static_cast<CpuProfilingManager *>(ctx);
+        self->RecordProfilingEvent(pid, comm, stack, cnt);
+    };
+    config.mCtx = this;
     pc->mConfig = std::move(config);
 
-    return mEBPFAdapter->StartPlugin(PluginType::CPU_PROFILING, std::move(pc)) ? 0 : 1;
+    return mEBPFAdapter->StartPlugin(PluginType::CPU_PROFILING, std::move(pc))
+               ? 0
+               : 1;
 }
 
 int CpuProfilingManager::Destroy() {
@@ -53,8 +57,8 @@ int CpuProfilingManager::Destroy() {
     return mEBPFAdapter->StopPlugin(PluginType::CPU_PROFILING) ? 0 : 1;
 }
 
-void CpuProfilingManager::RecordProfilingEvent(uint pid, const char *comm,
-                                               const char *symbol, uint cnt) {
+void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
+                                               char const *symbol, uint cnt) {
     // TODO: need aggregate the events
     auto sourceBuffer = std::make_shared<SourceBuffer>();
     PipelineEventGroup eventGroup(sourceBuffer);
