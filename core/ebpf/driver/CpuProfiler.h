@@ -14,18 +14,17 @@
 
 #pragma once
 
-#include "ebpf/driver/CpuProfilingAdapter.h"
 #include <unordered_set>
+
+#include "ebpf/driver/livetrace.h"
+#include "logger/Logger.h"
 
 namespace logtail {
 namespace ebpf {
 
 class CpuProfiler {
 public:
-    CpuProfiler(std::shared_ptr<CpuProfilingAdapter> profilingAdapter)
-        : mProfilingAdapter(std::move(profilingAdapter)) {
-        assert(mProfilingAdapter != nullptr);
-    }
+    CpuProfiler() = default;
 
     ~CpuProfiler() { Stop(); }
 
@@ -42,8 +41,8 @@ public:
         }
 
         std::string pidsToRemove = pidsToString(toRemove);
-        auto r = mProfilingAdapter->ProfilerCtrl(profiler, kRemove,
-                                                 pidsToRemove.c_str());
+        auto r =
+            livetrace_profiler_ctrl(profiler, kRemove, pidsToRemove.c_str());
         assert(r == 0);
 
         mPids.clear();
@@ -53,8 +52,7 @@ public:
 
     void Stop() {
         if (mProfiler != nullptr) {
-            auto ok = mProfilingAdapter->DestroyProfiler(mProfiler);
-            assert(ok);
+            livetrace_profiler_destroy(mProfiler);
             mProfiler = nullptr;
         }
         mPids.clear();
@@ -76,13 +74,11 @@ public:
         }
 
         std::string pidsToAdd = pidsToString(toAdd);
-        auto r =
-            mProfilingAdapter->ProfilerCtrl(profiler, kAdd, pidsToAdd.c_str());
+        auto r = livetrace_profiler_ctrl(profiler, kAdd, pidsToAdd.c_str());
         assert(r == 0);
 
         std::string pidsToRemove = pidsToString(toRemove);
-        mProfilingAdapter->ProfilerCtrl(profiler, kRemove,
-                                        pidsToRemove.c_str());
+        r = livetrace_profiler_ctrl(profiler, kRemove, pidsToRemove.c_str());
         assert(r == 0);
 
         mPids = newPids;
@@ -90,8 +86,7 @@ public:
         return true;
     }
 
-    void
-    RegisterPollHandler(CpuProfilingAdapter::profiler_read_cb_func handler) {
+    void RegisterPollHandler(livetrace_profiler_read_cb_t handler) {
         mHandler = handler;
     }
 
@@ -107,7 +102,7 @@ public:
             return false;
         }
 
-        mProfilingAdapter->ProfilerRead(profiler, mHandler);
+        livetrace_profiler_read(profiler, mHandler);
         return true;
     }
 
@@ -138,13 +133,9 @@ private:
         }
     }
 
-    CpuProfilingAdapter::Profiler *getProfiler() {
-        mProfilingAdapter->Init();
+    Profiler *getProfiler() {
         if (mProfiler == nullptr) {
-            mProfiler = mProfilingAdapter->CreateProfiler();
-            if (mProfiler == nullptr) {
-                return nullptr;
-            }
+            mProfiler = livetrace_profiler_create();
         }
         return mProfiler;
     }
@@ -152,9 +143,8 @@ private:
     static constexpr int kAdd = 1, kRemove = 0;
 
     std::unordered_set<uint32_t> mPids;
-    std::shared_ptr<CpuProfilingAdapter> mProfilingAdapter;
-    CpuProfilingAdapter::Profiler *mProfiler = nullptr;
-    CpuProfilingAdapter::profiler_read_cb_func mHandler = nullptr;
+    Profiler *mProfiler = nullptr;
+    livetrace_profiler_read_cb_t mHandler = nullptr;
 };
 
 } // namespace ebpf
