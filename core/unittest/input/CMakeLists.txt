@@ -37,6 +37,9 @@ if (LINUX)
 
     add_executable(input_ebpf_network_observer_unittest InputNetworkObserverUnittest.cpp)
     target_link_libraries(input_ebpf_network_observer_unittest unittest_base)
+
+    add_executable(input_ebpf_cpu_profiling_unittest InputCpuProfilingUnittest.cpp)
+    target_link_libraries(input_ebpf_cpu_profiling_unittest unittest_base)
 	
     add_executable(input_host_meta_unittest InputHostMetaUnittest.cpp)
     target_link_libraries(input_host_meta_unittest unittest_base)
@@ -82,6 +85,7 @@ if (LINUX)
     gtest_discover_tests(input_ebpf_process_security_unittest)
     gtest_discover_tests(input_ebpf_network_security_unittest)
     gtest_discover_tests(input_ebpf_network_observer_unittest)
+    gtest_discover_tests(input_ebpf_cpu_profiling_unittest)
     gtest_discover_tests(input_host_meta_unittest)
     gtest_discover_tests(input_host_monitor_unittest)
 endif()
