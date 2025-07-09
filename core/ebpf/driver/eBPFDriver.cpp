@@ -370,7 +370,7 @@ int start_plugin(logtail::ebpf::PluginConfig* arg) {
             }
 
             if (config->mHandler) {
-                gCpuProfiler->RegisterPollHandler(config->mHandler);
+                gCpuProfiler->RegisterPollHandler(config->mHandler, config->mCtx);
             }
 
             break;
@@ -544,7 +544,7 @@ int update_plugin(logtail::ebpf::PluginConfig* arg) {
             }
 
             if (config->mHandler) {
-                gCpuProfiler->RegisterPollHandler(config->mHandler);
+                gCpuProfiler->RegisterPollHandler(config->mHandler, config->mCtx);
             }
             
             break;
