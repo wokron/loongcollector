@@ -15,9 +15,10 @@
 #pragma once
 
 #include <unordered_set>
+#include <cassert>
 
 #include "ebpf/driver/livetrace.h"
-#include "logger/Logger.h"
+#include "Log.h"
 
 namespace logtail {
 namespace ebpf {
@@ -31,7 +32,7 @@ public:
     bool Suspend() {
         auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
+            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
             return false;
         }
 
@@ -62,7 +63,7 @@ public:
     bool UpdatePids(const std::unordered_set<uint32_t> &newPids) {
         auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
+            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
             return false;
         }
 
@@ -94,12 +95,12 @@ public:
     bool Poll() {
         auto profiler = getProfiler();
         if (profiler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] getProfiler failed", ""));
+            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
             return false;
         }
 
         if (mHandler == nullptr) {
-            LOG_ERROR(sLogger, ("[CpuProfiler] Handler not registered", ""));
+            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] Handler not registered");
             return false;
         }
 
