@@ -376,13 +376,7 @@ int start_plugin(logtail::ebpf::PluginConfig* arg) {
             auto* config = std::get_if<logtail::ebpf::CpuProfilingConfig>(&arg->mConfig);
             assert(config != nullptr);
 
-            bool ok;
-            ok = gCpuProfiler->UpdatePids(std::unordered_set<uint32_t>(config->mPids.begin(), config->mPids.end()));
-            if (!ok) {
-                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
-                         "cpu profiling: UpdatePids failed\n");
-                return kErrDriverInternal;
-            }
+            gCpuProfiler->UpdatePids(std::unordered_set<uint32_t>(config->mPids.begin(), config->mPids.end()));
 
             if (config->mHandler) {
                 gCpuProfiler->RegisterPollHandler(config->mHandler, config->mCtx);
@@ -403,7 +397,7 @@ int poll_plugin_pbs(logtail::ebpf::PluginType type, int32_t max_events, int32_t*
         return ebpf_poll_events(max_events, stop_flag, timeout_ms);
     } else if (type == logtail::ebpf::PluginType::CPU_PROFILING) {
         auto r = gCpuProfiler->Poll();
-        return r ? 1 : 0;
+        return r ? 0 : -1;
     }
     // find pbs
     std::vector<void*> pbs = gPluginPbs.at(static_cast<size_t>(type));
@@ -542,13 +536,7 @@ int update_plugin(logtail::ebpf::PluginConfig* arg) {
             auto* config = std::get_if<logtail::ebpf::CpuProfilingConfig>(&arg->mConfig);
             assert(config != nullptr);
 
-            bool ok;
-            ok = gCpuProfiler->UpdatePids(std::unordered_set<uint32_t>(config->mPids.begin(), config->mPids.end()));
-            if (!ok) {
-                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
-                         "cpu profiling: UpdatePids failed\n");
-                return kErrDriverInternal;
-            }
+            gCpuProfiler->UpdatePids(std::unordered_set<uint32_t>(config->mPids.begin(), config->mPids.end()));
 
             if (config->mHandler) {
                 gCpuProfiler->RegisterPollHandler(config->mHandler, config->mCtx);
@@ -696,12 +684,7 @@ int suspend_plugin(logtail::ebpf::PluginType pluginType) {
             break;
         }
         case logtail::ebpf::PluginType::CPU_PROFILING: {
-            auto ok = gCpuProfiler->Suspend();
-            if (!ok) {
-                EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_WARN,
-                         "[suspend plugin] cpu profiling: suspend failed\n");
-                return kErrDriverInternal;
-            }
+            gCpuProfiler->Suspend();
             break;
         }
         default: {
