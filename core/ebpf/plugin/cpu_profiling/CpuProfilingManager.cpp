@@ -64,8 +64,8 @@ void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
     PipelineEventGroup eventGroup(sourceBuffer);
     auto *logEvent = eventGroup.AddLogEvent();
     logEvent->SetContentNoCopy("pid", std::to_string(pid));
-    logEvent->SetContentNoCopy("comm", comm);
-    logEvent->SetContentNoCopy("symbol", symbol);
+    logEvent->SetContent("comm", std::string(comm));
+    logEvent->SetContent("symbol", std::string(symbol));
     logEvent->SetContentNoCopy("cnt", std::to_string(cnt));
 
     {
