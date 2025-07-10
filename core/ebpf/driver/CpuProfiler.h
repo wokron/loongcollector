@@ -14,11 +14,11 @@
 
 #pragma once
 
-#include <unordered_set>
 #include <cassert>
+#include <unordered_set>
 
-#include "ebpf/driver/livetrace.h"
 #include "Log.h"
+#include "ebpf/driver/livetrace.h"
 
 namespace logtail {
 namespace ebpf {
@@ -29,16 +29,12 @@ public:
 
     ~CpuProfiler() { Stop(); }
 
-    bool Suspend() {
+    void Suspend() {
         auto profiler = getProfiler();
-        if (profiler == nullptr) {
-            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
-            return false;
-        }
 
         auto &toRemove = mPids;
         if (toRemove.empty()) {
-            return true;
+            return;
         }
 
         std::string pidsToRemove = pidsToString(toRemove);
@@ -47,8 +43,6 @@ public:
         assert(r == 0);
 
         mPids.clear();
-
-        return true;
     }
 
     void Stop() {
@@ -60,31 +54,30 @@ public:
         mHandler = nullptr;
     }
 
-    bool UpdatePids(const std::unordered_set<uint32_t> &newPids) {
+    void UpdatePids(const std::unordered_set<uint32_t> &newPids) {
         auto profiler = getProfiler();
-        if (profiler == nullptr) {
-            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
-            return false;
-        }
 
         std::unordered_set<uint32_t> toAdd, toRemove;
         compareSets(newPids, toAdd, toRemove);
 
         if (toAdd.empty() && toRemove.empty()) {
-            return true; // No changes
+            return; // No changes
         }
 
-        std::string pidsToAdd = pidsToString(toAdd);
-        auto r = livetrace_profiler_ctrl(profiler, kAdd, pidsToAdd.c_str());
-        assert(r == 0);
+        if (!toAdd.empty()) {
+            std::string pidsToAdd = pidsToString(toAdd);
+            auto r = livetrace_profiler_ctrl(profiler, kAdd, pidsToAdd.c_str());
+            assert(r == 0);
+        }
 
-        std::string pidsToRemove = pidsToString(toRemove);
-        r = livetrace_profiler_ctrl(profiler, kRemove, pidsToRemove.c_str());
-        assert(r == 0);
+        if (!toRemove.empty()) {
+            std::string pidsToRemove = pidsToString(toRemove);
+            auto r = livetrace_profiler_ctrl(profiler, kRemove,
+                                             pidsToRemove.c_str());
+            assert(r == 0);
+        }
 
         mPids = newPids;
-
-        return true;
     }
 
     void RegisterPollHandler(livetrace_profiler_read_cb_t handler, void *ctx) {
@@ -94,13 +87,10 @@ public:
 
     bool Poll() {
         auto profiler = getProfiler();
-        if (profiler == nullptr) {
-            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] getProfiler failed");
-            return false;
-        }
 
         if (mHandler == nullptr) {
-            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN, "[CpuProfiler] Handler not registered");
+            EBPF_LOG(eBPFLogType::NAMI_LOG_TYPE_WARN,
+                     "[CpuProfiler] Handler not registered");
             return false;
         }
 
@@ -139,6 +129,7 @@ private:
         if (mProfiler == nullptr) {
             mProfiler = livetrace_profiler_create();
         }
+        assert(mProfiler != nullptr);
         return mProfiler;
     }
 
