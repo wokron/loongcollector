@@ -34,6 +34,7 @@ if (LINUX)
     endif ()
 
     add_library(${EBPF_DIRVER_TARGET} SHARED ${LIB_SOURCE_FILES})
+    target_include_directories(${EBPF_DIRVER_TARGET} PRIVATE .)
     target_link_options(${EBPF_DIRVER_TARGET} PRIVATE "-Wl,-rpath=.:${DEFAULT_DEPS_ROOT}/lib")
     target_link_libraries(${EBPF_DIRVER_TARGET} coolbpf)
     target_link_libraries(${EBPF_DIRVER_TARGET} profiler)
