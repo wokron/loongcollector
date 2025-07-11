@@ -53,6 +53,7 @@ add_unittest(file_retryable_event_unittest FileRetryableEventUnittest.cpp)
 add_unittest(file_security_manager_unittest FileSecurityManagerUnittest.cpp)
 add_unittest(retryable_event_unittest RetryableEventUnittest.cpp)
 add_unittest(http_retryable_event_unittest HttpRetryableEventUnittest.cpp)
+add_unittest(process_watcher_unittest ProcessWatcherUnittest.cpp)
 
 add_driver_unittest(id_allocator_unittest IdAllocatorUnittest.cpp)
 add_driver_unittest(ebpf_driver_log_unittest EBPFDriverLogUnittest.cpp)
