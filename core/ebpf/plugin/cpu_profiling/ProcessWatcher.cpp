@@ -1,0 +1,138 @@
+// Copyright 2025 iLogtail Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "boost/filesystem.hpp"
+
+#include "ebpf/plugin/cpu_profiling/ProcessWatcher.h"
+#include "logger/Logger.h"
+
+namespace logtail {
+namespace ebpf {
+
+struct ProcessEntry {
+    std::string cmdline;
+    uint32_t pid;
+
+    ProcessEntry(std::string cmdline, uint32_t pid)
+        : cmdline(std::move(cmdline)), pid(pid) {}
+};
+
+void ListAllProcs(std::vector<ProcessEntry> &proc_out) {
+    boost::filesystem::path procPath("/proc");
+    for (const auto &entry : boost::filesystem::directory_iterator(procPath)) {
+        std::string pidStr = entry.path().filename().string();
+        assert(!pidStr.empty());
+        if (!std::all_of(pidStr.begin(), pidStr.end(), ::isdigit)) {
+            continue;
+        }
+        uint32_t pid = std::stoi(pidStr);
+        boost::filesystem::path cmdlinePath = entry.path() / "cmdline";
+        std::ifstream cmdlineFile(cmdlinePath.string());
+        if (!cmdlineFile.is_open()) {
+            continue;
+        }
+
+        std::string cmdline;
+        std::getline(cmdlineFile, cmdline);
+        if (cmdline.empty()) {
+            continue;
+        }
+
+        // /proc/<pid>/cmdline use '\0' as separator, replace it with space
+        std::replace(cmdline.begin(), cmdline.end(), '\0', ' ');
+
+        proc_out.emplace_back(std::move(cmdline), pid);
+    }
+}
+
+void ProcessWatcher::Start() {
+    if (mRunning) {
+        return;
+    }
+    mRunning = true;
+    mWatcher = std::async(std::launch::async,
+                          &ProcessWatcher::watcherThreadFunc, this);
+}
+
+void ProcessWatcher::Stop() {
+    mRunning = false;
+    Resume();
+    if (mWatcher.valid()) {
+        mWatcher.wait();
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(mLock);
+        mDiscoveryOptions.clear();
+    }
+
+    LOG_INFO(sLogger, ("ProcessWatcher", "stop"));
+}
+
+void ProcessWatcher::Pause() {
+    std::lock_guard<std::mutex> guard(mLock);
+    mPaused = true;
+    LOG_INFO(sLogger, ("ProcessWatcher", "pause"));
+}
+
+void ProcessWatcher::Resume() {
+    std::lock_guard<std::mutex> guard(mLock);
+    mPaused = false;
+    mCond.notify_one();
+    LOG_INFO(sLogger, ("ProcessWatcher", "resume"));
+}
+
+void ProcessWatcher::RegisterWatch(const std::string &name,
+                                   const ProcessWatchOptions &options) {
+    std::lock_guard<std::mutex> guard(mLock);
+    mDiscoveryOptions.insert_or_assign(name, options);
+}
+
+void ProcessWatcher::RemoveWatch(const std::string &name) {
+    std::lock_guard<std::mutex> guard(mLock);
+    mDiscoveryOptions.erase(name);
+}
+
+void ProcessWatcher::watcherThreadFunc() {
+    while (mRunning) {
+        {
+            std::unique_lock<std::mutex> lock(mLock);
+            mCond.wait(lock, [&] { return !mPaused; });
+            findMatchedProcs();
+        }
+        // TODO: make it configurable
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void ProcessWatcher::findMatchedProcs() {
+    std::vector<ProcessEntry> procs;
+    ListAllProcs(procs);
+
+    for (const auto &kv : mDiscoveryOptions) {
+        const auto &options = kv.second;
+        std::vector<uint32_t> pids;
+        for (const auto &process : procs) {
+            if (options.IsMatch(process.cmdline)) {
+                pids.push_back(process.pid);
+            }
+        }
+        if (!pids.empty()) {
+            options.mCallback(std::move(pids));
+        }
+    }
+}
+
+} // namespace ebpf
+} // namespace logtail
