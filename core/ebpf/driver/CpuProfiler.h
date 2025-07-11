@@ -18,7 +18,7 @@
 #include <unordered_set>
 
 #include "Log.h"
-#include "ebpf/driver/livetrace.h"
+#include "ebpf/driver/Livetrace.h"
 
 namespace logtail {
 namespace ebpf {
