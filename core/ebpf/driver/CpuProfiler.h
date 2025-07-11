@@ -57,8 +57,9 @@ public:
     void UpdatePids(const std::unordered_set<uint32_t> &newPids) {
         auto profiler = getProfiler();
 
-        std::unordered_set<uint32_t> toAdd, toRemove;
-        compareSets(newPids, toAdd, toRemove);
+        auto& toAdd = newPids;
+        std::unordered_set<uint32_t> toRemove;
+        compareSets(newPids, toRemove);
 
         if (toAdd.empty() && toRemove.empty()) {
             return; // No changes
@@ -111,13 +112,7 @@ private:
     }
 
     void compareSets(const std::unordered_set<uint32_t> &newPids,
-                     std::unordered_set<uint32_t> &toAdd,
                      std::unordered_set<uint32_t> &toRemove) {
-        for (const auto &pid : newPids) {
-            if (mPids.find(pid) == mPids.end()) {
-                toAdd.insert(pid);
-            }
-        }
         for (const auto &pid : mPids) {
             if (newPids.find(pid) == newPids.end()) {
                 toRemove.insert(pid);
