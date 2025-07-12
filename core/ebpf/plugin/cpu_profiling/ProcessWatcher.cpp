@@ -88,9 +88,11 @@ void ProcessWatcher::Pause() {
 
 void ProcessWatcher::Resume() {
     std::lock_guard<std::mutex> guard(mLock);
-    mPaused = false;
-    mCond.notify_one();
-    LOG_INFO(sLogger, ("ProcessWatcher", "resume"));
+    if (mPaused) {
+        mPaused = false;
+        mCond.notify_one();
+        LOG_INFO(sLogger, ("ProcessWatcher", "resume"));
+    }
 }
 
 void ProcessWatcher::RegisterWatch(const std::string &name,
@@ -112,7 +114,7 @@ void ProcessWatcher::watcherThreadFunc() {
             findMatchedProcs();
         }
         // TODO: make it configurable
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 }
 
@@ -128,9 +130,8 @@ void ProcessWatcher::findMatchedProcs() {
                 pids.push_back(process.pid);
             }
         }
-        if (!pids.empty()) {
-            options.mCallback(std::move(pids));
-        }
+        // TODO: invoke only when pids is changed
+        options.mCallback(std::move(pids));
     }
 }
 

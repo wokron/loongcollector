@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "CpuProfilingManager.h"
+#include "ebpf/plugin/cpu_profiling/CpuProfilingManager.h"
 #include "collection_pipeline/queue/ProcessQueueManager.h"
 #include "ebpf/plugin/cpu_profiling/ProcessWatcher.h"
 
@@ -22,8 +22,8 @@ static void handleCpuProfilingEvent(uint32_t pid, char const *comm,
                                     char const *stack, uint32_t cnt,
                                     void *ctx) {
     assert(ctx != nullptr);
-    auto& self = reinterpret_cast<CpuProfilingManager&>(ctx);
-    self.recordProfilingEvent(pid, comm, stack, cnt);
+    auto self = static_cast<CpuProfilingManager *>(ctx);
+    self->RecordProfilingEvent(pid, comm, stack, cnt);
 }
 
 CpuProfilingManager::CpuProfilingManager(
@@ -99,16 +99,16 @@ void CpuProfilingManager::handleProcessWatchEvent(std::vector<uint32_t> pids) {
     mEBPFAdapter->UpdatePlugin(PluginType::CPU_PROFILING, std::move(pc));
 }
 
-void CpuProfilingManager::recordProfilingEvent(uint32_t pid, char const *comm,
+void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
                                                char const *symbol, uint cnt) {
     // TODO: need aggregate the events
     auto sourceBuffer = std::make_shared<SourceBuffer>();
     PipelineEventGroup eventGroup(sourceBuffer);
     auto *logEvent = eventGroup.AddLogEvent();
-    logEvent->SetContentNoCopy("pid", std::to_string(pid));
+    logEvent->SetContent("pid", std::to_string(pid));
     logEvent->SetContent("comm", std::string(comm));
     logEvent->SetContent("symbol", std::string(symbol));
-    logEvent->SetContentNoCopy("cnt", std::to_string(cnt));
+    logEvent->SetContent("cnt", std::to_string(cnt));
 
     {
         std::lock_guard lk(mContextMutex);

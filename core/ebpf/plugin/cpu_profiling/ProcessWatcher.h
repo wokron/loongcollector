@@ -14,11 +14,12 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <future>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
-#include "common/Lock.h"
 #include "ebpf/plugin/cpu_profiling/ProcessWatchOptions.h"
 
 namespace logtail {
