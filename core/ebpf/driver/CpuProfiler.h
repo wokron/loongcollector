@@ -15,6 +15,7 @@
 #pragma once
 
 #include <cassert>
+#include <mutex>
 #include <unordered_set>
 
 #include "Log.h"
@@ -30,6 +31,7 @@ public:
     ~CpuProfiler() { Stop(); }
 
     void Suspend() {
+        std::lock_guard<std::mutex> lock(mMutex);
         auto profiler = getProfiler();
 
         auto &toRemove = mPids;
@@ -46,6 +48,7 @@ public:
     }
 
     void Stop() {
+        std::lock_guard<std::mutex> lock(mMutex);
         if (mProfiler != nullptr) {
             livetrace_profiler_destroy(mProfiler);
             mProfiler = nullptr;
@@ -55,11 +58,11 @@ public:
     }
 
     void UpdatePids(const std::unordered_set<uint32_t> &newPids) {
+        std::lock_guard<std::mutex> lock(mMutex);
         auto profiler = getProfiler();
 
-        auto& toAdd = newPids;
-        std::unordered_set<uint32_t> toRemove;
-        compareSets(newPids, toRemove);
+        std::unordered_set<uint32_t> toAdd, toRemove;
+        compareSets(newPids, toAdd, toRemove);
 
         if (toAdd.empty() && toRemove.empty()) {
             return; // No changes
@@ -67,26 +70,25 @@ public:
 
         if (!toAdd.empty()) {
             std::string pidsToAdd = pidsToString(toAdd);
-            auto r = livetrace_profiler_ctrl(profiler, kAdd, pidsToAdd.c_str());
-            assert(r == 0);
+            livetrace_profiler_ctrl(profiler, kAdd, pidsToAdd.c_str());
         }
 
         if (!toRemove.empty()) {
             std::string pidsToRemove = pidsToString(toRemove);
-            auto r = livetrace_profiler_ctrl(profiler, kRemove,
-                                             pidsToRemove.c_str());
-            assert(r == 0);
+            livetrace_profiler_ctrl(profiler, kRemove, pidsToRemove.c_str());
         }
 
         mPids = newPids;
     }
 
     void RegisterPollHandler(livetrace_profiler_read_cb_t handler, void *ctx) {
+        std::lock_guard<std::mutex> lock(mMutex);
         mHandler = handler;
         mCtx = ctx;
     }
 
     bool Poll() {
+        std::lock_guard<std::mutex> lock(mMutex);
         auto profiler = getProfiler();
 
         if (mHandler == nullptr) {
@@ -112,7 +114,14 @@ private:
     }
 
     void compareSets(const std::unordered_set<uint32_t> &newPids,
+                     std::unordered_set<uint32_t> &toAdd,
                      std::unordered_set<uint32_t> &toRemove) {
+        for (const auto &pid : newPids) {
+            if (mPids.find(pid) == mPids.end()) {
+                toAdd.insert(pid);
+            }
+        }
+
         for (const auto &pid : mPids) {
             if (newPids.find(pid) == newPids.end()) {
                 toRemove.insert(pid);
@@ -130,6 +139,7 @@ private:
 
     static constexpr int kAdd = 1, kRemove = 0;
 
+    std::mutex mMutex;
     std::unordered_set<uint32_t> mPids;
     Profiler *mProfiler = nullptr;
     livetrace_profiler_read_cb_t mHandler = nullptr;

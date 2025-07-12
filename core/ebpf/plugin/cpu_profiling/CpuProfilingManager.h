@@ -62,9 +62,9 @@ public:
         return nullptr;
     }
 
-private:
-    void recordProfilingEvent(uint pid, const char *comm, const char *symbol,
+    void RecordProfilingEvent(uint pid, const char *comm, const char *symbol,
                               uint cnt);
+private:
 
     std::unique_ptr<PluginConfig> buildPluginConfig(std::vector<uint32_t> pids,
                                                     CpuProfilingHandler handler,
