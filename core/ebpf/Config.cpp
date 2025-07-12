@@ -548,18 +548,7 @@ bool CpuProfilingOption::Init(const Json::Value& config,
                               const CollectionPipelineContext* mContext,
                               const std::string& sName) {
     std::string errorMsg;
-
-    if (!GetOptionalListFilterParam<uint32_t>(config, "Pids", mPids, errorMsg)) {
-        PARAM_WARNING_IGNORE(mContext->GetLogger(),
-                             mContext->GetAlarm(),
-                             errorMsg,
-                             sName,
-                             mContext->GetConfigName(),
-                             mContext->GetProjectName(),
-                             mContext->GetLogstoreName(),
-                             mContext->GetRegion());
-    }
-
+    GetOptionalListFilterParam<std::string>(config, "CommandLines", mCmdlines, errorMsg);
     return true;
 }
 

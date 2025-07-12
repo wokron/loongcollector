@@ -20,45 +20,57 @@ namespace logtail::ebpf {
 
 class CpuProfilingManager : public AbstractManager {
 public:
-    CpuProfilingManager(const std::shared_ptr<ProcessCacheManager>& base,
-                           const std::shared_ptr<EBPFAdapter>& eBPFAdapter,
-                           moodycamel::BlockingConcurrentQueue<std::shared_ptr<CommonEvent>>& queue,
-                           const PluginMetricManagerPtr& metricManager);
+    CpuProfilingManager(
+        const std::shared_ptr<ProcessCacheManager> &base,
+        const std::shared_ptr<EBPFAdapter> &eBPFAdapter,
+        moodycamel::BlockingConcurrentQueue<std::shared_ptr<CommonEvent>>
+            &queue,
+        const PluginMetricManagerPtr &metricManager);
     ~CpuProfilingManager() = default;
 
     static std::shared_ptr<CpuProfilingManager>
-    Create(const std::shared_ptr<ProcessCacheManager>& processCacheManager,
-           const std::shared_ptr<EBPFAdapter>& eBPFAdapter,
-           moodycamel::BlockingConcurrentQueue<std::shared_ptr<CommonEvent>>& queue,
-           const PluginMetricManagerPtr& metricMgr) {
-        return std::make_shared<CpuProfilingManager>(processCacheManager, eBPFAdapter, queue, metricMgr);
+    Create(const std::shared_ptr<ProcessCacheManager> &processCacheManager,
+           const std::shared_ptr<EBPFAdapter> &eBPFAdapter,
+           moodycamel::BlockingConcurrentQueue<std::shared_ptr<CommonEvent>>
+               &queue,
+           const PluginMetricManagerPtr &metricMgr) {
+        return std::make_shared<CpuProfilingManager>(
+            processCacheManager, eBPFAdapter, queue, metricMgr);
     }
 
-    int Init(const PluginOptions& options) override;
+    int Init(const PluginOptions &options) override;
     int Destroy() override;
 
-    int HandleEvent(const std::shared_ptr<CommonEvent>& event) override { return 0; }
+    int HandleEvent(const std::shared_ptr<CommonEvent> &event) override {
+        return 0;
+    }
     int SendEvents() override { return 0; }
 
-    bool ScheduleNext(const std::chrono::steady_clock::time_point&, const std::shared_ptr<ScheduleConfig>&) override {
+    bool ScheduleNext(const std::chrono::steady_clock::time_point &,
+                      const std::shared_ptr<ScheduleConfig> &) override {
         return true;
     }
 
     PluginType GetPluginType() override { return PluginType::CPU_PROFILING; }
 
-    std::unique_ptr<PluginConfig>
-    GeneratePluginConfig([[maybe_unused]] const PluginOptions& options) override {
-        auto pc = std::make_unique<PluginConfig>();
-        pc->mPluginType = PluginType::CPU_PROFILING;
-        CpuProfilingConfig config;
-        auto& opts = std::get<CpuProfilingOption*>(options);
-        config.mPids = opts->mPids;
-        config.mHandler = nullptr; // do not change handler
-        pc->mConfig = std::move(config);
-        return pc;
+    int Resume(const PluginOptions &options) override { return 0; }
+
+    int Update([[maybe_unused]] const PluginOptions &options) override;
+
+    std::unique_ptr<PluginConfig> GeneratePluginConfig(
+        [[maybe_unused]] const PluginOptions &options) override {
+        return nullptr;
     }
 
-    void RecordProfilingEvent(uint pid, const char* comm, const char* symbol, uint cnt);
+private:
+    void recordProfilingEvent(uint pid, const char *comm, const char *symbol,
+                              uint cnt);
+
+    std::unique_ptr<PluginConfig> buildPluginConfig(std::vector<uint32_t> pids,
+                                                    CpuProfilingHandler handler,
+                                                    void *ctx);
+
+    void handleProcessWatchEvent(std::vector<uint32_t> pids);
 };
 
 } // namespace logtail::ebpf

@@ -14,8 +14,17 @@
 
 #include "CpuProfilingManager.h"
 #include "collection_pipeline/queue/ProcessQueueManager.h"
+#include "ebpf/plugin/cpu_profiling/ProcessWatcher.h"
 
 namespace logtail::ebpf {
+
+static void handleCpuProfilingEvent(uint32_t pid, char const *comm,
+                                    char const *stack, uint32_t cnt,
+                                    void *ctx) {
+    assert(ctx != nullptr);
+    auto& self = reinterpret_cast<CpuProfilingManager&>(ctx);
+    self.recordProfilingEvent(pid, comm, stack, cnt);
+}
 
 CpuProfilingManager::CpuProfilingManager(
     const std::shared_ptr<ProcessCacheManager> &base,
@@ -34,30 +43,63 @@ int CpuProfilingManager::Init(const PluginOptions &options) {
 
     mInited = true;
 
-    std::unique_ptr<PluginConfig> pc = std::make_unique<PluginConfig>();
-    pc->mPluginType = PluginType::CPU_PROFILING;
-    CpuProfilingConfig config;
-    config.mPids = profilingOpts->mPids;
-    config.mHandler = [](uint32_t pid, char const *comm, char const *stack,
-                         uint32_t cnt, void *ctx) {
-        assert(ctx != nullptr);
-        auto *self = static_cast<CpuProfilingManager *>(ctx);
-        self->RecordProfilingEvent(pid, comm, stack, cnt);
-    };
-    config.mCtx = this;
-    pc->mConfig = std::move(config);
+    auto pc = buildPluginConfig({}, handleCpuProfilingEvent, this);
 
-    return mEBPFAdapter->StartPlugin(PluginType::CPU_PROFILING, std::move(pc))
-               ? 0
-               : 1;
+    bool ok =
+        mEBPFAdapter->StartPlugin(PluginType::CPU_PROFILING, std::move(pc));
+    if (!ok) {
+        return -1;
+    }
+
+    ProcessWatcher::GetInstance()->Start();
+    ProcessWatcher::GetInstance()->Resume();
+    ProcessWatcher::GetInstance()->RegisterWatch(
+        "cpu_profiling_watch",
+        ProcessWatchOptions(
+            profilingOpts->mCmdlines,
+            std::bind(&CpuProfilingManager::handleProcessWatchEvent, this,
+                      std::placeholders::_1)));
+
+    return 0;
 }
 
 int CpuProfilingManager::Destroy() {
     mInited = false;
-    return mEBPFAdapter->StopPlugin(PluginType::CPU_PROFILING) ? 0 : 1;
+    ProcessWatcher::GetInstance()->RemoveWatch("cpu_profiling_watch");
+    ProcessWatcher::GetInstance()->Pause();
+    return mEBPFAdapter->StopPlugin(PluginType::CPU_PROFILING) ? 0 : -1;
 }
 
-void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
+int CpuProfilingManager::Update(const PluginOptions &options) {
+    auto &profilingOpts = std::get<CpuProfilingOption *>(options);
+    ProcessWatcher::GetInstance()->RegisterWatch(
+        "cpu_profiling_watch",
+        ProcessWatchOptions(
+            profilingOpts->mCmdlines,
+            std::bind(&CpuProfilingManager::handleProcessWatchEvent, this,
+                      std::placeholders::_1)));
+    return 0;
+}
+
+std::unique_ptr<PluginConfig>
+CpuProfilingManager::buildPluginConfig(std::vector<uint32_t> pids,
+                                       CpuProfilingHandler handler, void *ctx) {
+    std::unique_ptr<PluginConfig> pc = std::make_unique<PluginConfig>();
+    pc->mPluginType = PluginType::CPU_PROFILING;
+    CpuProfilingConfig config;
+    config.mPids = std::move(pids);
+    config.mHandler = handler;
+    config.mCtx = ctx;
+    pc->mConfig = std::move(config);
+    return pc;
+}
+
+void CpuProfilingManager::handleProcessWatchEvent(std::vector<uint32_t> pids) {
+    auto pc = buildPluginConfig(std::move(pids), nullptr, nullptr);
+    mEBPFAdapter->UpdatePlugin(PluginType::CPU_PROFILING, std::move(pc));
+}
+
+void CpuProfilingManager::recordProfilingEvent(uint32_t pid, char const *comm,
                                                char const *symbol, uint cnt) {
     // TODO: need aggregate the events
     auto sourceBuffer = std::make_shared<SourceBuffer>();

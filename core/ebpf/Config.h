@@ -56,7 +56,7 @@ public:
               const CollectionPipelineContext* mContext,
               const std::string& sName);
     
-    std::vector<uint32_t> mPids;
+    std::vector<std::string> mCmdlines;
 };
 
 using PluginOptions = std::variant<SecurityOptions*, ObserverNetworkOption*, CpuProfilingOption*>;

@@ -24,11 +24,15 @@
 namespace logtail {
 namespace ebpf {
 
-// TODO: maybe rename to ProcessWatcher
 class ProcessWatcher {
 public:
     ProcessWatcher(const ProcessWatcher &) = delete;
     ProcessWatcher &operator=(const ProcessWatcher &) = delete;
+
+    ProcessWatcher(ProcessWatcher &&) = delete;
+    ProcessWatcher &operator=(ProcessWatcher &&) = delete;
+
+    ~ProcessWatcher() { Stop(); }
 
     static ProcessWatcher *GetInstance() {
         static ProcessWatcher instance;
@@ -62,5 +66,4 @@ private:
 };
 
 } // namespace ebpf
-
 } // namespace logtail
