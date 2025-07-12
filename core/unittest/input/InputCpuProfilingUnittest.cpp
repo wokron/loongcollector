@@ -71,7 +71,7 @@ void InputCpuProfilingUnittest::OnSuccessfulInit() {
     configStr = R"(
         {
             "Type": "input_cpu_profiling",
-            "Pids": [1],
+            "CommandLines": ["java"],
         }
     )";
     APSARA_TEST_TRUE(ParseJsonTable(configStr, configJson, errorMsg));
@@ -82,8 +82,8 @@ void InputCpuProfilingUnittest::OnSuccessfulInit() {
     input->CommitMetricsRecordRef();
     APSARA_TEST_EQUAL(input->sName, "input_cpu_profiling");
     logtail::ebpf::CpuProfilingOption option = input->mCpuProfilingOption;
-    APSARA_TEST_TRUE(option.mPids.size() == 1);
-    APSARA_TEST_TRUE(option.mPids[0] == 1);
+    APSARA_TEST_TRUE(option.mCmdlines.size() == 1);
+    APSARA_TEST_TRUE(option.mCmdlines[0] == "java");
 }
 
 void InputCpuProfilingUnittest::OnFailedInit() {
@@ -95,7 +95,7 @@ void InputCpuProfilingUnittest::OnFailedInit() {
     configStr = R"(
         {
             "Type": "input_cpu_profiling",
-            "Pids": ["invalid_pid"],
+            "CommandLines": [1, 2, 3],
         }
     )";
     APSARA_TEST_TRUE(ParseJsonTable(configStr, configJson, errorMsg));
@@ -106,7 +106,7 @@ void InputCpuProfilingUnittest::OnFailedInit() {
     input->CommitMetricsRecordRef();
     APSARA_TEST_EQUAL(input->sName, "input_cpu_profiling");
     logtail::ebpf::CpuProfilingOption option = input->mCpuProfilingOption;
-    APSARA_TEST_TRUE(option.mPids.empty());
+    APSARA_TEST_TRUE(option.mCmdlines.empty());
 }
 
 void InputCpuProfilingUnittest::OnSuccessfulStart() {
@@ -117,7 +117,7 @@ void InputCpuProfilingUnittest::OnSuccessfulStart() {
     configStr = R"(
         {
             "Type": "input_cpu_profiling",
-            "Pids": [1],
+            "CommandLines": ["java"],
         }
     )";
     APSARA_TEST_TRUE(ParseJsonTable(configStr, configJson, errorMsg));
@@ -141,7 +141,7 @@ void InputCpuProfilingUnittest::OnSuccessfulStop() {
     configStr = R"(
         {
             "Type": "input_cpu_profiling",
-            "Pids": [1],
+            "CommandLines": ["java"],
         }
     )";
     APSARA_TEST_TRUE(ParseJsonTable(configStr, configJson, errorMsg));
