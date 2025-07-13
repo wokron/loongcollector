@@ -63,7 +63,12 @@ private:
     mutable std::mutex mLock;
     mutable std::condition_variable mCond;
     bool mPaused = false;
-    std::unordered_map<std::string, ProcessWatchOptions> mDiscoveryOptions;
+
+    struct WatchState {
+        ProcessWatchOptions mOptions;
+        std::vector<uint32_t> mPrevPids;
+    };
+    std::unordered_map<std::string, WatchState> mWatchStates;
 };
 
 } // namespace ebpf

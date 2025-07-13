@@ -74,7 +74,7 @@ void ProcessWatcher::Stop() {
 
     {
         std::lock_guard<std::mutex> guard(mLock);
-        mDiscoveryOptions.clear();
+        mWatchStates.clear();
     }
 
     LOG_INFO(sLogger, ("ProcessWatcher", "stop"));
@@ -98,12 +98,13 @@ void ProcessWatcher::Resume() {
 void ProcessWatcher::RegisterWatch(const std::string &name,
                                    const ProcessWatchOptions &options) {
     std::lock_guard<std::mutex> guard(mLock);
-    mDiscoveryOptions.insert_or_assign(name, options);
+    auto it = mWatchStates.emplace(name, WatchState()).first;
+    it->second.mOptions = options;
 }
 
 void ProcessWatcher::RemoveWatch(const std::string &name) {
     std::lock_guard<std::mutex> guard(mLock);
-    mDiscoveryOptions.erase(name);
+    mWatchStates.erase(name);
 }
 
 void ProcessWatcher::watcherThreadFunc() {
@@ -118,20 +119,36 @@ void ProcessWatcher::watcherThreadFunc() {
     }
 }
 
+static bool isOrderedSame(const std::vector<uint32_t> &a,
+                          const std::vector<uint32_t> &b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void ProcessWatcher::findMatchedProcs() {
     std::vector<ProcessEntry> procs;
     ListAllProcs(procs);
 
-    for (const auto &kv : mDiscoveryOptions) {
-        const auto &options = kv.second;
+    for (auto &[_, state] : mWatchStates) {
+        auto &options = state.mOptions;
         std::vector<uint32_t> pids;
-        for (const auto &process : procs) {
+        for (auto &process : procs) {
             if (options.IsMatch(process.cmdline)) {
                 pids.push_back(process.pid);
             }
         }
-        // TODO: invoke only when pids is changed
-        options.mCallback(std::move(pids));
+        std::sort(pids.begin(), pids.end());
+        if (!isOrderedSame(pids, state.mPrevPids)) {
+            state.mPrevPids = pids;
+            options.mCallback(std::move(pids));
+        }
     }
 }
 

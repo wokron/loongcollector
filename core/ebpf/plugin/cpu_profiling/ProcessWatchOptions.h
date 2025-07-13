@@ -27,6 +27,8 @@ class ProcessWatchOptions {
 public:
     using Callback = std::function<void(std::vector<uint32_t> pids)>;
 
+    ProcessWatchOptions() = default;
+
     ProcessWatchOptions(std::vector<std::string> wildcards, Callback callback)
         : mWildcards(std::move(wildcards)), mCallback(std::move(callback)) {}
 
