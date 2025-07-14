@@ -15,6 +15,8 @@
 #pragma once
 
 #include "ebpf/plugin/AbstractManager.h"
+#include "ebpf/util/AggregateTree.h"
+#include "ebpf/type/ProfilingEvent.h"
 
 namespace logtail::ebpf {
 
@@ -41,10 +43,8 @@ public:
     int Init(const PluginOptions &options) override;
     int Destroy() override;
 
-    int HandleEvent(const std::shared_ptr<CommonEvent> &event) override {
-        return 0;
-    }
-    int SendEvents() override { return 0; }
+    int HandleEvent(const std::shared_ptr<CommonEvent> &event) override;
+    int SendEvents() override;
 
     bool ScheduleNext(const std::chrono::steady_clock::time_point &,
                       const std::shared_ptr<ScheduleConfig> &) override {
@@ -71,6 +71,11 @@ private:
                                                     void *ctx);
 
     void handleProcessWatchEvent(std::vector<uint32_t> pids);
+
+    std::mutex mLock;
+    int64_t mSendIntervalMs = 2000;
+    int64_t mLastSendTimeMs = 0;
+    SIZETAggTree<ProfilingEventGroup, std::shared_ptr<CommonEvent>> mAggregateTree;
 };
 
 } // namespace logtail::ebpf

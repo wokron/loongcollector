@@ -38,6 +38,7 @@ enum class KernelEventType {
 
     FILE_PERMISSION_EVENT_WRITE,
     FILE_PERMISSION_EVENT_READ,
+    CPU_PROFILING_EVENT,
 };
 
 class CommonEvent {
