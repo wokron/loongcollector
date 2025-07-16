@@ -140,7 +140,7 @@ void ProcessWatcher::findMatchedProcs() {
         auto &options = state.mOptions;
         std::vector<uint32_t> pids;
         for (auto &process : procs) {
-            if (options.IsMatch(process.cmdline)) {
+            if (isMatch(options, process.cmdline)) {
                 pids.push_back(process.pid);
             }
         }
@@ -150,6 +150,20 @@ void ProcessWatcher::findMatchedProcs() {
             options.mCallback(std::move(pids));
         }
     }
+}
+
+bool ProcessWatcher::isMatch(const ProcessWatchOptions &options,
+                             const std::string &cmdline) {
+    if (options.mWildcards.empty()) {
+        return true;
+    }
+
+    for (const auto &wildcard : options.mWildcards) {
+        if (mWildcardEngine.IsMatch(wildcard, cmdline)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace ebpf

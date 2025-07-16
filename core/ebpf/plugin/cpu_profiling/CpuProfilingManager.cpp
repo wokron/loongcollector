@@ -186,6 +186,7 @@ int CpuProfilingManager::SendEvents() {
             }
         }
     }
+    return 0;
 }
 
 int CpuProfilingManager::Update(const PluginOptions &options) {

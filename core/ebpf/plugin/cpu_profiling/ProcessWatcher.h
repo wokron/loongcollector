@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "common/Wildcard.h"
 #include "ebpf/plugin/cpu_profiling/ProcessWatchOptions.h"
 
 namespace logtail {
@@ -57,6 +58,9 @@ private:
 
     void findMatchedProcs();
 
+    bool isMatch(const ProcessWatchOptions &options,
+                 const std::string &cmdline);
+
     std::atomic_bool mRunning = false;
     std::future<void> mWatcher;
 
@@ -69,6 +73,7 @@ private:
         std::vector<uint32_t> mPrevPids;
     };
     std::unordered_map<std::string, WatchState> mWatchStates;
+    WildcardEngine mWildcardEngine;
 };
 
 } // namespace ebpf
