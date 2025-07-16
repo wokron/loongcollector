@@ -32,8 +32,6 @@ public:
     ProcessWatchOptions(std::vector<std::string> wildcards, Callback callback)
         : mWildcards(std::move(wildcards)), mCallback(std::move(callback)) {}
 
-    bool IsMatch(const std::string &cmdline) const;
-
     std::vector<std::string> mWildcards;
     Callback mCallback;
 };
