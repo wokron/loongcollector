@@ -144,18 +144,28 @@ int CpuProfilingManager::SendEvents() {
     for (auto &node : nodes) {
         LOG_DEBUG(sLogger, ("child num", node->mChild.size()));
         aggTree.ForEach(node, [&](const ProfilingEventGroup *group) {
+            auto pidSb = sourceBuffer->CopyString(std::to_string(group->mPid));
+
             for (const auto &innerEvent : group->mInnerEvents) {
                 CommonEvent *ce = innerEvent.get();
                 auto *profilingEvent = static_cast<ProfilingEvent *>(ce);
+                auto commSb = sourceBuffer->CopyString(profilingEvent->mComm);
+
                 for (auto &stack : profilingEvent->mStacks) {
+                    auto stackSb = sourceBuffer->CopyString(stack.first);
+                    auto cntSb =
+                        sourceBuffer->CopyString(std::to_string(stack.second));
+
                     auto *logEvent = eventGroup.AddLogEvent();
-                    // TODO: use SetContentNoCopy
-                    logEvent->SetContent(kPid.LogKey(),
-                                         std::to_string(group->mPid));
-                    logEvent->SetContent(kComm.LogKey(), profilingEvent->mComm);
-                    logEvent->SetContent(kStack.LogKey(), stack.first);
-                    logEvent->SetContent(kCnt.LogKey(),
-                                         std::to_string(stack.second));
+                    logEvent->SetContentNoCopy(
+                        kPid.LogKey(), StringView(pidSb.data, pidSb.size));
+                    logEvent->SetContentNoCopy(
+                        kComm.LogKey(), StringView(commSb.data, commSb.size));
+                    logEvent->SetContentNoCopy(
+                        kStack.LogKey(),
+                        StringView(stackSb.data, stackSb.size));
+                    logEvent->SetContentNoCopy(
+                        kCnt.LogKey(), StringView(cntSb.data, cntSb.size));
                 }
             }
         });
