@@ -22,8 +22,15 @@ const std::string InputCpuProfiling::sName = "input_cpu_profiling";
 
 bool InputCpuProfiling::Init(const Json::Value &config,
                              Json::Value &optionalGoPipeline) {
-    // TODO: add metrics
+    static const std::unordered_map<std::string, MetricType> metricKeys = {
+        {METRIC_PLUGIN_IN_EVENTS_TOTAL, MetricType::METRIC_TYPE_COUNTER},
+        {METRIC_PLUGIN_OUT_EVENTS_TOTAL, MetricType::METRIC_TYPE_COUNTER},
+        {METRIC_PLUGIN_OUT_EVENT_GROUPS_TOTAL, MetricType::METRIC_TYPE_COUNTER},
+    };
 
+    mPluginMetricPtr = std::make_shared<PluginMetricManager>(
+        GetMetricsRecordRef().GetLabels(), metricKeys,
+        MetricCategory::METRIC_CATEGORY_PLUGIN_SOURCE);
     return mCpuProfilingOption.Init(config, mContext, sName);
 }
 
@@ -35,7 +42,8 @@ bool InputCpuProfiling::Start() {
     }
     return ebpf::EBPFServer::GetInstance()->EnablePlugin(
         mContext->GetConfigName(), mIndex,
-        logtail::ebpf::PluginType::CPU_PROFILING, mContext, &mCpuProfilingOption, nullptr);
+        logtail::ebpf::PluginType::CPU_PROFILING, mContext,
+        &mCpuProfilingOption, mPluginMetricPtr);
 }
 
 bool InputCpuProfiling::Stop(bool isPipelineRemoving) {

@@ -177,6 +177,8 @@ int CpuProfilingManager::SendEvents() {
             return 0;
         }
         LOG_DEBUG(sLogger, ("event group size", eventGroup.GetEvents().size()));
+        ADD_COUNTER(mPushLogsTotal, eventGroup.GetEvents().size());
+        ADD_COUNTER(mPushLogGroupTotal, 1);
         std::unique_ptr<ProcessQueueItem> item =
             std::make_unique<ProcessQueueItem>(std::move(eventGroup),
                                                this->mPluginIndex);
@@ -263,7 +265,7 @@ static std::vector<StackCnt> parseStackCnt(char const *symbol) {
 
 void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
                                                char const *symbol, uint cnt) {
-
+    ADD_COUNTER(mRecvKernelEventsTotal, 1);
     auto stackCnt = parseStackCnt(symbol);
     auto ts = std::chrono::system_clock::now().time_since_epoch().count();
     auto event = std::make_shared<ProfilingEvent>(
