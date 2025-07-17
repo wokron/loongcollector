@@ -43,8 +43,7 @@ CpuProfilingManager::CpuProfilingManager(
           },
           [](const std::shared_ptr<CommonEvent> &in,
              std::shared_ptr<SourceBuffer> &sourceBuffer) {
-              return std::make_unique<ProfilingEventGroup>(in->mPid,
-                                                           in->mKtime);
+              return std::make_unique<ProfilingEventGroup>(in->mPid);
           }) {}
 
 int CpuProfilingManager::Init(const PluginOptions &options) {
@@ -147,14 +146,15 @@ int CpuProfilingManager::SendEvents() {
             for (const auto &innerEvent : group->mInnerEvents) {
                 CommonEvent *ce = innerEvent.get();
                 auto *profilingEvent = static_cast<ProfilingEvent *>(ce);
-                auto *logEvent = eventGroup.AddLogEvent();
-                // TODO: replace "pid" by kPid.LogKey() and so on
-                // TODO: use SetContentNoCopy
-                logEvent->SetContent("pid", std::to_string(group->mPid));
-                logEvent->SetContent("comm", profilingEvent->mComm);
-                logEvent->SetContent("symbol", profilingEvent->mSymbol);
-                logEvent->SetContent("cnt",
-                                     std::to_string(profilingEvent->mCnt));
+                for (auto &stack : profilingEvent->mStacks) {
+                    auto *logEvent = eventGroup.AddLogEvent();
+                    // TODO: replace "pid" by kPid.LogKey() and so on
+                    // TODO: use SetContentNoCopy
+                    logEvent->SetContent("pid", std::to_string(group->mPid));
+                    logEvent->SetContent("comm", profilingEvent->mComm);
+                    logEvent->SetContent("stack", stack.first);
+                    logEvent->SetContent("cnt", std::to_string(stack.second));
+                }
             }
         });
     }
@@ -218,10 +218,45 @@ void CpuProfilingManager::handleProcessWatchEvent(std::vector<uint32_t> pids) {
     mEBPFAdapter->UpdatePlugin(PluginType::CPU_PROFILING, std::move(pc));
 }
 
+static std::vector<StackCnt> parseStackCnt(char const *symbol) {
+    // Format: "<comm>:<pid>;<stacks> <cnt>\n"
+    // Example: "bash:1234;func1;func2;func3 10\n"
+
+    std::vector<StackCnt> result;
+
+    std::istringstream ssymbol;
+    ssymbol.str(symbol);
+    std::string line;
+    while (std::getline(ssymbol, line)) {
+        auto pos1 = line.find(';');
+        if (pos1 == std::string::npos) {
+            LOG_ERROR(sLogger, ("Invalid symbol format", line));
+            continue;
+        }
+        auto pos2 = line.find(' ');
+        if (pos2 == std::string::npos || pos2 < pos1) {
+            LOG_ERROR(sLogger, ("Invalid symbol format", line));
+            continue;
+        }
+
+        auto stack = line.substr(pos1 + 1, pos2 - pos1 - 1);
+        auto cntStr = line.substr(pos2 + 1);
+        uint32_t cnt = std::stoul(cntStr);
+
+        result.push_back(std::make_pair(stack, cnt));
+    }
+
+    return result;
+}
+
 void CpuProfilingManager::RecordProfilingEvent(uint32_t pid, char const *comm,
                                                char const *symbol, uint cnt) {
+
+    auto stackCnt = parseStackCnt(symbol);
+    auto ts = std::chrono::system_clock::now().time_since_epoch().count();
     auto event = std::make_shared<ProfilingEvent>(
-        pid, KernelEventType::CPU_PROFILING_EVENT, comm, symbol, cnt);
+        pid, KernelEventType::CPU_PROFILING_EVENT, comm, std::move(stackCnt),
+        ts);
 
     if (!mCommonEventQueue.try_enqueue(event)) {
         LOG_WARNING(sLogger,

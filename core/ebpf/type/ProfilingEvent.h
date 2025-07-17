@@ -18,29 +18,28 @@
 
 namespace logtail::ebpf {
 
+using Stack = std::string;
+using StackCnt = std::pair<Stack, uint32_t>;
+
 class ProfilingEvent : public CommonEvent {
 public:
     ProfilingEvent(uint32_t pid, KernelEventType type, const std::string &comm,
-                   const std::string &symbol, uint32_t cnt)
-        : CommonEvent(pid, 0, type, 0), mComm(comm),
-          mSymbol(symbol), mCnt(cnt) {}
+                   std::vector<StackCnt> stacks, uint64_t timestamp)
+        : CommonEvent(pid, 0, type, timestamp), mComm(comm),
+          mStacks(std::move(stacks)) {}
 
     [[nodiscard]] PluginType GetPluginType() const override {
         return PluginType::CPU_PROFILING;
     }
 
     std::string mComm;
-    std::string mSymbol;
-    uint32_t mCnt;
+    std::vector<StackCnt> mStacks;
 };
 
 class ProfilingEventGroup {
 public:
-    ProfilingEventGroup(uint32_t pid, uint64_t ktime)
-        : mPid(pid), mKtime(ktime) {}
+    ProfilingEventGroup(uint32_t pid) : mPid(pid) {}
     uint32_t mPid;
-    uint64_t mKtime;
-    // attrs
     std::vector<std::shared_ptr<CommonEvent>> mInnerEvents;
 };
 
