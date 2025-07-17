@@ -18,6 +18,7 @@
 #include "common/TimeKeeper.h"
 #include "common/magic_enum.hpp"
 #include "ebpf/plugin/cpu_profiling/ProcessWatcher.h"
+#include "ebpf/type/table/ProfileTable.h"
 
 namespace logtail::ebpf {
 
@@ -148,12 +149,13 @@ int CpuProfilingManager::SendEvents() {
                 auto *profilingEvent = static_cast<ProfilingEvent *>(ce);
                 for (auto &stack : profilingEvent->mStacks) {
                     auto *logEvent = eventGroup.AddLogEvent();
-                    // TODO: replace "pid" by kPid.LogKey() and so on
                     // TODO: use SetContentNoCopy
-                    logEvent->SetContent("pid", std::to_string(group->mPid));
-                    logEvent->SetContent("comm", profilingEvent->mComm);
-                    logEvent->SetContent("stack", stack.first);
-                    logEvent->SetContent("cnt", std::to_string(stack.second));
+                    logEvent->SetContent(kPid.LogKey(),
+                                         std::to_string(group->mPid));
+                    logEvent->SetContent(kComm.LogKey(), profilingEvent->mComm);
+                    logEvent->SetContent(kStack.LogKey(), stack.first);
+                    logEvent->SetContent(kCnt.LogKey(),
+                                         std::to_string(stack.second));
                 }
             }
         });
