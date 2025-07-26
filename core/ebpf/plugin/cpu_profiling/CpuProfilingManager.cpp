@@ -22,8 +22,8 @@
 
 namespace logtail::ebpf {
 
-static void handleCpuProfilingEvent(uint32_t pid, char const *comm,
-                                    char const *stack, uint32_t cnt,
+static void handleCpuProfilingEvent(uint32_t pid, const char *comm,
+                                    const char *stack, uint32_t cnt,
                                     void *ctx) {
     assert(ctx != nullptr);
     auto self = static_cast<CpuProfilingManager *>(ctx);
