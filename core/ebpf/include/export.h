@@ -153,7 +153,7 @@ struct FileSecurityConfig {
     bool operator==(const FileSecurityConfig& other) const { return mOptions == other.mOptions; }
 };
 
-using CpuProfilingHandler = void (*)(uint32_t pid, char const *comm, char const *stack, uint32_t cnt, void *ctx);
+using CpuProfilingHandler = void (*)(uint32_t pid, const char *comm, const char *stack, uint32_t cnt, void *ctx);
 
 struct CpuProfilingConfig {
     std::vector<uint32_t> mPids;

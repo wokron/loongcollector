@@ -30,8 +30,8 @@ void livetrace_profiler_destroy(struct Profiler *profiler);
 
 int32_t livetrace_profiler_ctrl(struct Profiler *profiler, int op, const char *pids);
 
-using livetrace_profiler_read_cb_t = void (*)(uint32_t pid, char const *comm,
-                                    char const *stack, uint32_t cnt, void *ctx);
+using livetrace_profiler_read_cb_t = void (*)(uint32_t pid, const char *comm,
+                                    const char *stack, uint32_t cnt, void *ctx);
 
 void livetrace_profiler_read(struct Profiler *profiler, livetrace_profiler_read_cb_t cb, void *ctx);
 }
