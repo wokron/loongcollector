@@ -102,14 +102,14 @@ void ManagerUnittest::TestProcessSecurityManagerBasic() {
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
     APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)),
+        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
         0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Suspend(), 0);
     APSARA_TEST_FALSE(manager->IsRunning());
 
-    APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -122,7 +122,7 @@ void ManagerUnittest::TestProcessSecurityManagerEventHandling() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
     auto execveEvent = std::make_shared<ProcessEvent>(1234, 5678, KernelEventType::PROCESS_EXECVE_EVENT, 799);
     APSARA_TEST_EQUAL(manager->HandleEvent(execveEvent), 0);
@@ -145,14 +145,14 @@ void ManagerUnittest::TestFileSecurityManagerBasic() {
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
     APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)),
+        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
         0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Suspend(), 0);
     APSARA_TEST_FALSE(manager->IsRunning());
 
-    APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -167,7 +167,7 @@ void ManagerUnittest::TestFileSecurityManagerEventHandling() {
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
     auto permissionEvent = std::make_shared<FileEvent>(1234,
                                                        5678,
@@ -203,11 +203,11 @@ void ManagerUnittest::TestManagerConcurrency() {
     SecurityOptions options;
     APSARA_TEST_EQUAL(processManager->Init(), 0);
     processManager->AddOrUpdateConfig(
-        &ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+        &ctx, 0, nullptr, PluginOptions(&options));
     CollectionPipelineContext ctx2;
     ctx2.SetConfigName("test_config_file");
     APSARA_TEST_EQUAL(fileManager->Init(), 0);
-    fileManager->AddOrUpdateConfig(&ctx2, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    fileManager->AddOrUpdateConfig(&ctx2, 0, nullptr, PluginOptions(&options));
 
 
     std::vector<std::thread> threads;
@@ -247,7 +247,7 @@ void ManagerUnittest::TestManagerErrorHandling() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
     manager->Suspend();
     APSARA_TEST_FALSE(manager->IsRunning());
     APSARA_TEST_EQUAL(manager->HandleEvent(event), 0);
@@ -264,7 +264,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
     APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)),
+        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
         0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
@@ -273,7 +273,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
     APSARA_TEST_FALSE(manager->IsRunning());
 
     // 测试恢复
-    APSARA_TEST_EQUAL(manager->Resume(std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)), 0);
+    APSARA_TEST_EQUAL(manager->Resume(PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Destroy(), 0);
@@ -287,7 +287,7 @@ void ManagerUnittest::TestNetworkSecurityManagerEventHandling() {
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
     APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)),
+        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
         0);
 
     // 测试TCP连接事件
@@ -348,7 +348,7 @@ void ManagerUnittest::TestNetworkSecurityManagerAggregation() {
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
     APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options)),
+        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
         0);
 
     // 创建多个相关的网络事件
@@ -400,7 +400,7 @@ void ManagerUnittest::TestProcessSecurityManagerAggregation() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
     // 创建多个相关的进程事件
     std::vector<std::shared_ptr<ProcessEvent>> events;
@@ -446,7 +446,7 @@ void ManagerUnittest::TestFileSecurityManagerAggregation() {
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    manager->AddOrUpdateConfig(&ctx, 0, nullptr, std::variant<SecurityOptions*, ObserverNetworkOption*>(&options));
+    manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
 
     // 创建多个相关的文件事件
     std::vector<std::shared_ptr<FileEvent>> events;
