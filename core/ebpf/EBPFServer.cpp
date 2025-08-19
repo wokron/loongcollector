@@ -339,7 +339,7 @@ bool EBPFServer::startPluginInternal(const std::string& pipelineName,
             case PluginType::CPU_PROFILING: {
                 if (!pluginMgr) {
                     auto mgr = CpuProfilingManager::Create(mProcessCacheManager, mEBPFAdapter, mCommonEventQueue);
-                    // mgr->SetMetrics(mRecvKernelEventsTotal, mLossKernelEventsTotal);
+                    mgr->SetMetrics(mRecvKernelEventsTotal);
                     pluginMgr = mgr;
                 }
                 break;
