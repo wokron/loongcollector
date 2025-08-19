@@ -35,6 +35,7 @@
 #include "plugin/input/InputNetworkObserver.h"
 #include "plugin/input/InputNetworkSecurity.h"
 #include "plugin/input/InputProcessSecurity.h"
+#include "plugin/input/InputCpuProfiling.h"
 #include "unittest/Unittest.h"
 
 DECLARE_FLAG_BOOL(logtail_mode);
@@ -51,6 +52,7 @@ public:
     void TestProcessSecurity();
     void TestNetworkSecurity();
     void TestFileSecurity();
+    void TestCpuProfiling();
 
     // for start and stop all ...
     void TestAllStartAndStop();
@@ -297,6 +299,37 @@ void eBPFServerUnittest::TestProcessSecurity() {
     // EXPECT_TRUE(res);
     // std::this_thread::sleep_for(std::chrono::seconds(10));
     // res = input->Stop(true);
+    EXPECT_TRUE(res);
+}
+
+void eBPFServerUnittest::TestCpuProfiling() {
+    std::string configStr = R"(
+        {
+            "Type": "input_cpu_profiling"
+        }
+    )";
+    std::string errorMsg;
+    Json::Value configJson, optionalGoPipeline;
+    APSARA_TEST_TRUE(ParseJsonTable(configStr, configJson, errorMsg));
+    CpuProfilingOption profiling_option;
+    profiling_option.Init(configJson, &ctx, "test");
+    auto input = std::make_shared<InputCpuProfiling>();
+    input->SetContext(ctx);
+    input->CreateMetricsRecordRef("test", "1");
+    auto initStatus = input->Init(configJson, optionalGoPipeline);
+    input->CommitMetricsRecordRef();
+    APSARA_TEST_TRUE(initStatus);
+
+    ctx.SetConfigName("test-1");
+    auto res = input->Start();
+    EXPECT_TRUE(res);
+
+    APSARA_TEST_TRUE(ebpf::EBPFServer::GetInstance()->mEnvMgr.AbleToLoadDyLib());
+    APSARA_TEST_TRUE(ebpf::EBPFServer::GetInstance()->mEBPFAdapter != nullptr);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    res = input->Stop(true);
     EXPECT_TRUE(res);
 }
 
@@ -828,6 +861,7 @@ void eBPFServerUnittest::TestEnvManager() {
 UNIT_TEST_CASE(eBPFServerUnittest, TestUpdateFileSecurity);
 UNIT_TEST_CASE(eBPFServerUnittest, TestFileSecurity);
 UNIT_TEST_CASE(eBPFServerUnittest, TestProcessSecurity);
+UNIT_TEST_CASE(eBPFServerUnittest, TestCpuProfiling);
 UNIT_TEST_CASE(eBPFServerUnittest, TestDefaultEbpfParameters);
 UNIT_TEST_CASE(eBPFServerUnittest, TestDefaultAndLoadEbpfParameters);
 UNIT_TEST_CASE(eBPFServerUnittest, TestLoadEbpfParametersV1);
