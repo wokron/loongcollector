@@ -7,6 +7,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <unordered_set>
 
 extern "C" {
 #include <coolbpf/net.h>
@@ -156,7 +157,7 @@ struct FileSecurityConfig {
 using CpuProfilingHandler = void (*)(uint32_t pid, const char *comm, const char *stack, uint32_t cnt, void *ctx);
 
 struct CpuProfilingConfig {
-    std::vector<uint32_t> mPids;
+    std::unordered_set<uint32_t> mPids;
     CpuProfilingHandler mHandler;
     void *mCtx;
 };
