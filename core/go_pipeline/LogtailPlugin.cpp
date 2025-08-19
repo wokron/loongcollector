@@ -28,6 +28,7 @@
 #include "common/TimeUtil.h"
 #include "common/compression/CompressorFactory.h"
 #include "container_manager/ConfigContainerInfoUpdateCmd.h"
+#include "ebpf/plugin/cpu_profiling/ProcessDiscoveryManager.h"
 #include "file_server/ConfigManager.h"
 #include "logger/Logger.h"
 #include "monitor/AlarmManager.h"
@@ -295,6 +296,10 @@ int LogtailPlugin::ExecPluginCmd(
     if (paramsStr.size() < (size_t)5 || !ParseJsonTable(paramsStr, jsonParams, errorMsg)) {
         LOG_ERROR(sLogger, ("invalid docker container params", paramsStr)("errorMsg", errorMsg));
         return -2;
+    }
+
+    if (ebpf::ProcessDiscoveryManager::GetInstance()->CheckDiscoveryExist(configNameStr)) {
+        LOG_DEBUG(sLogger, ("get container info for cpu profiling", "")("config", configNameStr)("cmdId", cmdId));
     }
 
     switch (cmdType) {
