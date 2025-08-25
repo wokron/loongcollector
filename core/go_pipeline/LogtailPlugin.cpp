@@ -295,6 +295,29 @@ static void extractContainerIds(const Json::Value &allCmd, std::vector<std::stri
     }
 }
 
+static void extractContainerIdsAndRootPath(const Json::Value &allCmd,
+    std::vector<std::pair<std::string, std::string>> &idsWithRoot) {
+    assert(idsWithRoot.empty());
+    if (allCmd.isNull()) {
+        return;
+    }
+    if (!allCmd.isArray()) {
+        return;
+    }
+    for (auto it = allCmd.begin(); it != allCmd.end(); ++it) {
+        const Json::Value& entry = *it;
+        if (!entry.isMember("ID") || !entry["ID"].isString() || entry["ID"].empty()) {
+            continue;
+        }
+        std::string cid = entry["ID"].asString();
+        std::string rootfsPath = "";
+        if (entry.isMember("UpperDir") && entry["UpperDir"].isString() && !entry["UpperDir"].empty()) {
+            rootfsPath = entry["UpperDir"].asString();
+        }
+        idsWithRoot.emplace_back(std::move(cid), std::move(rootfsPath));
+    }
+}
+
 int LogtailPlugin::ExecPluginCmd(
     const char* configName, int configNameSize, int cmdId, const char* params, int paramsLen) {
     if (cmdId < (int)PLUGIN_CMD_MIN || cmdId > (int)PLUGIN_CMD_MAX) {
@@ -319,12 +342,10 @@ int LogtailPlugin::ExecPluginCmd(
         switch (cmdType) {
             case PLUGIN_DOCKER_UPDATE_FILE:
             case PLUGIN_DOCKER_UPDATE_FILE_ALL: {
-                std::vector<std::string> ids;
-                extractContainerIds(jsonParams["AllCmd"], ids);
-                bool succ = ebpf::ProcessDiscoveryManager::GetInstance()->UpdateDiscovery(
-                    configNameStr, [&](ebpf::ProcessDiscoveryConfig& config) {
-                        config.mContainerIds.insert(ids.begin(), ids.end());
-                    });
+                std::vector<std::pair<std::string, std::string>> idsWithRoot;
+                extractContainerIdsAndRootPath(jsonParams["AllCmd"], idsWithRoot);
+                bool succ = ebpf::ProcessDiscoveryManager::GetInstance()
+                    ->AddContainerInfo(configNameStr, idsWithRoot);
                 // this may happen because we stop the c++ input first, then the go pipeline
                 if (!succ) {
                     LOG_WARNING(sLogger, ("try to update a removed config, config", configNameStr));
@@ -333,12 +354,8 @@ int LogtailPlugin::ExecPluginCmd(
             case PLUGIN_DOCKER_STOP_FILE: {
                 std::vector<std::string> ids;
                 extractContainerIds(jsonParams["AllCmd"], ids);
-                bool succ = ebpf::ProcessDiscoveryManager::GetInstance()->UpdateDiscovery(
-                    configNameStr, [&](ebpf::ProcessDiscoveryConfig& config) {
-                        for (auto& id : ids) {
-                            config.mContainerIds.erase(id);
-                        }
-                    });
+                bool succ = ebpf::ProcessDiscoveryManager::GetInstance()
+                        ->RemoveContainerInfo(configNameStr, ids);
                 if (!succ) {
                     LOG_WARNING(sLogger, ("try to update a removed config, config", configNameStr));
                 }

@@ -25,6 +25,7 @@
 #include "common/LogtailCommonFlags.h"
 #include "common/ProcParser.h"
 #include "boost/regex.hpp"
+#include "ebpf/plugin/cpu_profiling/ProcessEntry.h"
 
 namespace logtail {
 namespace ebpf {
@@ -32,23 +33,7 @@ namespace ebpf {
 struct ProcessDiscoveryConfig {
     size_t mConfigKey;
     std::vector<boost::regex> mRegexs;
-    std::unordered_set<std::string> mContainerIds;
     bool mFullDiscovery = false;
-
-    bool IsMatch(const std::string& cmdline, const std::string& containerId) {
-        if (mFullDiscovery) {
-            return true;
-        }
-        for (auto& regex : mRegexs) {
-            if (boost::regex_match(cmdline, regex)) {
-                return true;
-            }
-        }
-        if (!containerId.empty() && mContainerIds.find(containerId) != mContainerIds.end()) {
-            return true;
-        }
-        return false;
-    }
 };
 
 class ProcessDiscoveryManager {
@@ -62,7 +47,6 @@ public:
         std::unordered_map<uint32_t, std::string> mAddPidsToRoot;
     };
     using NotifyFn = std::function<void(DiscoverResult)>;
-    using UpdateFn = std::function<void(ProcessDiscoveryConfig&)>;
 
     ProcessDiscoveryManager() : mProcParser(getProcParserPrefix()) {}
 
@@ -81,13 +65,15 @@ public:
     void Start(NotifyFn fn);
     void Stop();
 
-    void AddOrUpdateDiscovery(const std::string &configName, UpdateFn updater);
-
-    bool UpdateDiscovery(const std::string &configName, UpdateFn updater);
+    void AddOrUpdateDiscovery(const std::string &configName, ProcessDiscoveryConfig config);
 
     void RemoveDiscovery(const std::string &configName);
 
     bool CheckDiscoveryExist(const std::string &configName);
+
+    bool AddContainerInfo(const std::string &configName, std::vector<std::pair<std::string, std::string>> containerToRoot);
+
+    bool RemoveContainerInfo(const std::string &configName, const std::vector<std::string> &containerIds);
 
 private:
     static std::string getProcParserPrefix() {
@@ -102,25 +88,59 @@ private:
     struct InnerState {
         ProcessDiscoveryConfig mConfig;
         std::unordered_set<uint32_t> mPrevPids;
+        std::unordered_map<std::string, std::string> mContainerIdToRoot;
 
-        bool diffAndUpdate(std::unordered_set<uint32_t> pids, std::unordered_set<uint32_t> &toAdd, std::unordered_set<uint32_t> &toRemove) {
-            for (auto& pid : pids) {
-                if (mPrevPids.find(pid) == mPrevPids.end()) {
-                    toAdd.insert(pid);
+        void diffAndUpdate(const std::unordered_map<uint32_t, ProcessEntry*> &matchProcs, DiscoverResult &result) {
+            auto configKey = mConfig.mConfigKey;
+            Entry entry;
+            auto& toAdd = entry.mPidsToAdd;
+            auto& toRemove = entry.mPidsToRemove;
+
+            // remove
+            for (auto it = mPrevPids.begin(); it != mPrevPids.end(); ) {
+                auto& pid = *it;
+                if (matchProcs.find(pid) == matchProcs.end()) {
+                    toRemove.insert(pid);
+                    it = mPrevPids.erase(it);
+                } else {
+                    it++;
                 }
             }
 
-            for (auto& pid : mPrevPids) {
-                if (pids.find(pid) == pids.end()) {
-                    toRemove.insert(pid);
+            // add
+            for (auto& [pid, procPtr] : matchProcs) {
+                auto& proc = *procPtr;
+                if (mPrevPids.find(pid) == mPrevPids.end()) {
+                    toAdd.insert(pid);
+                    mPrevPids.insert(pid);
+
+                    std::string rootfsPath = "";
+                    if (auto it = mContainerIdToRoot.find(proc.mContainerId); it != mContainerIdToRoot.end()) {
+                        rootfsPath = it->second;
+                    }
+                    result.mAddPidsToRoot.emplace(pid, rootfsPath);
                 }
             }
 
             bool anyUpdate = !toAdd.empty() || !toRemove.empty();
             if (anyUpdate) {
-                mPrevPids = std::move(pids);
+                result.mResultsPerConfig.emplace_back(configKey, std::move(entry));
             }
-            return anyUpdate;
+        }
+
+        bool isMatch(const std::string& cmdline, const std::string& containerId) {
+            if (mConfig.mFullDiscovery) {
+                return true;
+            }
+            for (auto& regex : mConfig.mRegexs) {
+                if (boost::regex_match(cmdline, regex)) {
+                    return true;
+                }
+            }
+            if (!containerId.empty()) {
+                return mContainerIdToRoot.find(containerId) != mContainerIdToRoot.end();
+            }
+            return false;
         }
     };
 
