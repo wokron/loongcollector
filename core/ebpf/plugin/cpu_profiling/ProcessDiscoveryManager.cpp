@@ -18,7 +18,6 @@
 #include <chrono>
 
 #include "ebpf/plugin/cpu_profiling/ProcessDiscoveryManager.h"
-#include "ebpf/plugin/cpu_profiling/ProcessEntry.h"
 #include "logger/Logger.h"
 
 namespace logtail {
@@ -48,24 +47,11 @@ void ProcessDiscoveryManager::Stop() {
     LOG_INFO(sLogger, ("ProcessDiscoveryManager", "stop"));
 }
 
-void ProcessDiscoveryManager::AddOrUpdateDiscovery(const std::string &configName, UpdateFn updater) {
+void ProcessDiscoveryManager::AddOrUpdateDiscovery(const std::string &configName, ProcessDiscoveryConfig config) {
     std::lock_guard<std::mutex> guard(mLock);
     auto it = mStates.emplace(configName, InnerState{}).first;
     auto &state = it->second;
-    auto &config = state.mConfig;
-    updater(config);
-}
-
-bool ProcessDiscoveryManager::UpdateDiscovery(const std::string &configName, UpdateFn updater) {
-    std::lock_guard<std::mutex> guard(mLock);
-    auto it = mStates.find(configName);
-    if (it == mStates.end()) {
-        return false;
-    }
-    auto &state = it->second;
-    auto &config = state.mConfig;
-    updater(config);
-    return true;
+    state.mConfig = std::move(config);
 }
 
 void ProcessDiscoveryManager::RemoveDiscovery(const std::string &configName) {
@@ -76,6 +62,34 @@ void ProcessDiscoveryManager::RemoveDiscovery(const std::string &configName) {
 bool ProcessDiscoveryManager::CheckDiscoveryExist(const std::string &configName) {
     std::lock_guard<std::mutex> guard(mLock);
     return mStates.find(configName) != mStates.end();
+}
+
+bool ProcessDiscoveryManager::AddContainerInfo(const std::string &configName,
+        std::vector<std::pair<std::string, std::string>> containerToRoot) {
+    std::lock_guard<std::mutex> guard(mLock);
+    auto it = mStates.find(configName);
+    if (it == mStates.end()) {
+        return false;
+    }
+    auto &state = it->second;
+    for (auto& [cid, rootPath] : containerToRoot) {
+        [[maybe_unused]] auto [it, ok] = state.mContainerIdToRoot.emplace(std::move(cid), std::move(rootPath));
+        assert(ok || (!ok && it->second == rootPath)); // rootPath of a container should not change
+    }
+    return true;
+}
+
+bool ProcessDiscoveryManager::RemoveContainerInfo(const std::string &configName, const std::vector<std::string> &containerIds) {
+    std::lock_guard<std::mutex> guard(mLock);
+    auto it = mStates.find(configName);
+    if (it == mStates.end()) {
+        return false;
+    }
+    auto &state = it->second;
+    for (auto& cid : containerIds) {
+        state.mContainerIdToRoot.erase(cid);
+    }
+    return true;
 }
 
 void ProcessDiscoveryManager::run() {
@@ -89,23 +103,13 @@ void ProcessDiscoveryManager::run() {
             std::lock_guard<std::mutex> guard(mLock);
 
             for (auto &[_, state] : mStates) {
-                auto& config = state.mConfig;
-                std::unordered_set<uint32_t> matchedPids;
-                for (const auto& proc : procs) {
-                    if (config.IsMatch(proc.mCmdline, proc.mContainerId)) {
-                        matchedPids.insert(proc.mPid);
+                std::unordered_map<uint32_t, ProcessEntry*> matchedPids;
+                for (auto& proc : procs) {
+                    if (state.isMatch(proc.mCmdline, proc.mContainerId)) {
+                        matchedPids.emplace(proc.mPid, &proc);
                     }
                 }
-                Entry entry;
-                bool anyUpdate = state.diffAndUpdate(std::move(matchedPids), entry.mPidsToAdd, entry.mPidsToRemove);
-                if (!anyUpdate) {
-                    continue;
-                }
-                // TODO: now just mock, need to implement later
-                for (auto& pid : entry.mPidsToAdd) {
-                    result.mAddPidsToRoot.emplace(pid, "");
-                }
-                result.mResultsPerConfig.emplace_back(config.mConfigKey, std::move(entry));
+                state.diffAndUpdate(matchedPids, result);
             }
         }
 

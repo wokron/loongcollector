@@ -26,7 +26,7 @@ public:
     void TestStartAndStop();
     void TestSingleConfig();
     void TestMultiConfig();
-    void TestUpdateConfig();
+    void TestAddContainerInfo();
     void TestRemoveConfig();
     void TestCheckConfigExist();
 };
@@ -59,8 +59,8 @@ void ProcessDiscoveryManagerUnittest::TestSingleConfig() {
     manager.Start(callback);
 
     // watch single config
-    manager.AddOrUpdateDiscovery("test_watch", [&](ProcessDiscoveryConfig& config) {
-        config.mRegexs.push_back(boost::regex("sleep.+"));
+    manager.AddOrUpdateDiscovery("test_watch", ProcessDiscoveryConfig{
+        .mRegexs = {boost::regex("sleep.+")}
     });
     std::system("sleep 0.5");
     APSARA_TEST_GE(count, 1);
@@ -75,28 +75,28 @@ void ProcessDiscoveryManagerUnittest::TestMultiConfig() {
     ProcessDiscoveryManager manager;
     manager.Start(callback);
 
-    // watch single config
-    manager.AddOrUpdateDiscovery("test_watch", [&](ProcessDiscoveryConfig& config) {
-        config.mRegexs.push_back(boost::regex("sleep.+"));
+    // watch multi config
+    manager.AddOrUpdateDiscovery("test_watch", ProcessDiscoveryConfig{
+        .mRegexs = {boost::regex("sleep.+")}
     });
-    manager.AddOrUpdateDiscovery("test_watch2", [&](ProcessDiscoveryConfig& config) {
-        config.mRegexs.push_back(boost::regex("sleep.+"));
+    manager.AddOrUpdateDiscovery("test_watch2", ProcessDiscoveryConfig{
+        .mRegexs = {boost::regex("sleep.+")}
     });
     std::system("sleep 0.5");
     APSARA_TEST_GE(count, 2);
 }
 
-void ProcessDiscoveryManagerUnittest::TestUpdateConfig() {
+void ProcessDiscoveryManagerUnittest::TestAddContainerInfo() {
     ProcessDiscoveryManager manager;
     manager.Start([](ProcessDiscoveryManager::DiscoverResult r) {});
 
-    manager.AddOrUpdateDiscovery("test_watch", [](ProcessDiscoveryConfig& config) {});
+    manager.AddOrUpdateDiscovery("test_watch", ProcessDiscoveryConfig{});
 
     // ok to update "test_watch"
-    APSARA_TEST_TRUE(manager.UpdateDiscovery("test_watch", [](ProcessDiscoveryConfig& config) {}));
+    APSARA_TEST_TRUE(manager.AddContainerInfo("test_watch", {}));
 
     // not ok to update "test_watch2" 
-    APSARA_TEST_FALSE(manager.UpdateDiscovery("test_watch2", [](ProcessDiscoveryConfig& config) {}));
+    APSARA_TEST_FALSE(manager.AddContainerInfo("test_watch2", {}));
 }
 
 void ProcessDiscoveryManagerUnittest::TestRemoveConfig() {
@@ -108,8 +108,8 @@ void ProcessDiscoveryManagerUnittest::TestRemoveConfig() {
     ProcessDiscoveryManager manager;
     manager.Start(callback);
 
-    manager.AddOrUpdateDiscovery("test_watch", [&](ProcessDiscoveryConfig& config) {
-        config.mRegexs.push_back(boost::regex("sleep.+"));
+    manager.AddOrUpdateDiscovery("test_watch", ProcessDiscoveryConfig{
+        .mRegexs = {boost::regex("sleep.+")}
     });
     std::system("sleep 0.5");
     APSARA_TEST_GE(count, 1);
@@ -125,14 +125,14 @@ void ProcessDiscoveryManagerUnittest::TestCheckConfigExist() {
     manager.Start([](ProcessDiscoveryManager::DiscoverResult r) {});
 
     APSARA_TEST_FALSE(manager.CheckDiscoveryExist("test_watch"));
-    manager.AddOrUpdateDiscovery("test_watch", [&](ProcessDiscoveryConfig& config) {});
+    manager.AddOrUpdateDiscovery("test_watch", ProcessDiscoveryConfig{});
     APSARA_TEST_TRUE(manager.CheckDiscoveryExist("test_watch"));
 }
 
 UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestStartAndStop);
 UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestSingleConfig);
 UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestMultiConfig);
-UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestUpdateConfig);
+UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestAddContainerInfo);
 UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestRemoveConfig);
 UNIT_TEST_CASE(ProcessDiscoveryManagerUnittest, TestCheckConfigExist);
 

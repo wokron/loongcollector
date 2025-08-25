@@ -95,26 +95,24 @@ int CpuProfilingManager::AddOrUpdateConfig(
 
     CpuProfilingOption *opts = std::get<CpuProfilingOption *>(options);
 
-    ProcessDiscoveryManager::GetInstance()->AddOrUpdateDiscovery(
-        configName, [&](ProcessDiscoveryConfig& config) {
-            config.mConfigKey = key;
-            config.mFullDiscovery = false;
-            config.mRegexs.clear();
-            if (opts->mEnableSystemProfiling) {
-                config.mFullDiscovery = true;
-                return;
+    ProcessDiscoveryConfig config{
+        .mConfigKey = key,
+        .mFullDiscovery = opts->mEnableSystemProfiling,
+    };
+    if (!config.mFullDiscovery) {
+        for (auto& cmdStr : opts->mCmdlines) {
+            try {
+                config.mRegexs.emplace_back(cmdStr);
+            } catch (boost::regex_error& e) {
+                LOG_ERROR(sLogger,
+                    ("CpuProfilingManager", "failed to compile regex")
+                    ("pattern", cmdStr)("error", e.what()));
+                continue;
             }
-            for (auto& cmdStr : opts->mCmdlines) {
-                try {
-                    config.mRegexs.emplace_back(cmdStr);
-                } catch (boost::regex_error& e) {
-                    LOG_ERROR(sLogger,
-                        ("CpuProfilingManager", "failed to compile regex")
-                        ("pattern", cmdStr)("error", e.what()));
-                    continue;
-                }
-            }
-        });
+        }
+    }
+
+    ProcessDiscoveryManager::GetInstance()->AddOrUpdateDiscovery(configName, std::move(config));
 
     LOG_DEBUG(sLogger, ("CpuProfilingManager", "add or update config")("config", configName));
     
