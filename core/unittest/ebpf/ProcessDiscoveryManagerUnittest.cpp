@@ -52,7 +52,7 @@ void ProcessDiscoveryManagerUnittest::TestStartAndStop() {
 void ProcessDiscoveryManagerUnittest::TestSingleConfig() {
     std::atomic<int> count = 0;
     auto callback = [&](ProcessDiscoveryManager::DiscoverResult r) {
-        count += r.size();
+        count += r.mResultsPerConfig.size();
     };
 
     ProcessDiscoveryManager manager;
@@ -69,7 +69,7 @@ void ProcessDiscoveryManagerUnittest::TestSingleConfig() {
 void ProcessDiscoveryManagerUnittest::TestMultiConfig() {
     std::atomic<int> count = 0;
     auto callback = [&](ProcessDiscoveryManager::DiscoverResult r) {
-        count += r.size();
+        count += r.mResultsPerConfig.size();
     };
 
     ProcessDiscoveryManager manager;
@@ -102,7 +102,7 @@ void ProcessDiscoveryManagerUnittest::TestUpdateConfig() {
 void ProcessDiscoveryManagerUnittest::TestRemoveConfig() {
     std::atomic<int> count = 0;
     auto callback = [&](ProcessDiscoveryManager::DiscoverResult r) {
-        count += r.size();
+        count += r.mResultsPerConfig.size();
     };
 
     ProcessDiscoveryManager manager;

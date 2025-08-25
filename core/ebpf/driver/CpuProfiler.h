@@ -78,51 +78,53 @@ public:
             livetrace_profiler_destroy(mProfiler);
             mProfiler = nullptr;
         }
-        mPids.clear();
         mHandler = nullptr;
         mCtx = nullptr;
     }
 
-    void UpdatePids(std::unordered_set<uint32_t> newPids) {
+    using RootPath = std::string;
+    void UpdatePids(std::unordered_map<uint32_t, RootPath> toAddWithRoot, std::unordered_set<uint32_t> toRemove) {
         assert(mProfiler != nullptr);
         std::lock_guard<std::mutex> lock(mMutex);
 
-        std::unordered_set<uint32_t> toAdd, toRemove;
-        compareSets(newPids, toAdd, toRemove);
+        auto printToAdd = [&] {
+            std::string result;
+            for (auto& [pid, rootPath] : toAddWithRoot) {
+                result += std::to_string(pid) + ":" + rootPath;
+                result += ",";
+            }
+            return result;
+        };
+        ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
+                "[CpuProfiler][UpdatePids] toAddWithRoot: %s, toRemove: %s",
+                printToAdd().c_str(), pidsToString(toRemove).c_str());
 
-        if (toAdd.empty() && toRemove.empty()) {
-            return; // No changes
+        std::unordered_set<uint32_t> toAdd;
+        for (auto& [pids, _] : toAddWithRoot) {
+            toAdd.insert(pids);
         }
 
         if (!toAdd.empty()) {
-            std::string pidsToAdd = pidsToString(toAdd);
+            std::string toAddStr = pidsToString(toAdd);
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] add pids: %s", pidsToAdd.c_str());
+                "[CpuProfiler][UpdatePids] add pids: %s", toAddStr.c_str());
             livetrace_profiler_ctrl(mProfiler, LivetraceCtrlOp::LIVETRACE_ADD,
-                                    pidsToAdd.c_str());
+                                    toAddStr.c_str());
         }
 
         if (!toRemove.empty()) {
-            std::string pidsToRemove = pidsToString(toRemove);
+            std::string toRemoveStr = pidsToString(toRemove);
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] remove pids: %s", pidsToRemove.c_str());
+                "[CpuProfiler][UpdatePids] remove pids: %s", toRemoveStr.c_str());
             livetrace_profiler_ctrl(mProfiler,
                                     LivetraceCtrlOp::LIVETRACE_REMOVE,
-                                    pidsToRemove.c_str());
+                                    toRemoveStr.c_str());
         }
-
-        mPids = std::move(newPids);
     }
 
     void Poll() {
         std::lock_guard<std::mutex> lock(mMutex);
         assert(mProfiler != nullptr && mHandler != nullptr);
-        if (mPids.empty()) {
-            return;
-        }
-
-        ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][Poll] poll");
         livetrace_profiler_read(mProfiler, handler_without_ctx);
     }
 
@@ -142,24 +144,7 @@ private:
         return result;
     }
 
-    void compareSets(const std::unordered_set<uint32_t> &newPids,
-                     std::unordered_set<uint32_t> &toAdd,
-                     std::unordered_set<uint32_t> &toRemove) {
-        for (const auto &pid : newPids) {
-            if (mPids.find(pid) == mPids.end()) {
-                toAdd.insert(pid);
-            }
-        }
-
-        for (const auto &pid : mPids) {
-            if (newPids.find(pid) == newPids.end()) {
-                toRemove.insert(pid);
-            }
-        }
-    }
-
     std::mutex mMutex;
-    std::unordered_set<uint32_t> mPids;
     Profiler *mProfiler = nullptr;
     // TODO: make this non-static
     inline static livetrace_profiler_read_cb_ctx_t mHandler = nullptr;

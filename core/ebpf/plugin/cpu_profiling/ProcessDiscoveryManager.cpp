@@ -83,28 +83,33 @@ void ProcessDiscoveryManager::run() {
         std::vector<ProcessEntry> procs;
         ListAllProcesses(mProcParser, procs);
 
-        std::vector<DiscoverEntry> result;
+        DiscoverResult result;
 
         {
             std::lock_guard<std::mutex> guard(mLock);
 
             for (auto &[_, state] : mStates) {
                 auto& config = state.mConfig;
-                std::set<uint32_t> matchedPids;
+                std::unordered_set<uint32_t> matchedPids;
                 for (const auto& proc : procs) {
                     if (config.IsMatch(proc.mCmdline, proc.mContainerId)) {
                         matchedPids.insert(proc.mPid);
                     }
                 }
-                if (state.mPrevPids == matchedPids) {
+                Entry entry;
+                bool anyUpdate = state.diffAndUpdate(std::move(matchedPids), entry.mPidsToAdd, entry.mPidsToRemove);
+                if (!anyUpdate) {
                     continue;
                 }
-                result.emplace_back(config.mConfigKey, matchedPids); // copy
-                state.mPrevPids = std::move(matchedPids); // move
+                // TODO: now just mock, need to implement later
+                for (auto& pid : entry.mPidsToAdd) {
+                    result.mAddPidsToRoot.emplace(pid, "");
+                }
+                result.mResultsPerConfig.emplace_back(config.mConfigKey, std::move(entry));
             }
         }
 
-        if (!result.empty()) {
+        if (!result.mResultsPerConfig.empty()) {
             mCallback(std::move(result));
         }
 

@@ -24,10 +24,12 @@ namespace logtail {
 namespace ebpf {
 
 std::unique_ptr<PluginConfig>
-buildCpuProfilingConfig(std::unordered_set<uint32_t> pids, CpuProfilingHandler handler,
+buildCpuProfilingConfig(std::unordered_map<uint32_t, std::string> pidsToAdd, std::unordered_set<uint32_t> pidsToRemove, CpuProfilingHandler handler,
                         void *ctx) {
     CpuProfilingConfig config = {
-        .mPids = std::move(pids), .mHandler = handler, .mCtx = ctx};
+        .mPidsToAdd = std::move(pidsToAdd),
+        .mPidsToRemove = std::move(pidsToRemove),
+        .mHandler = handler, .mCtx = ctx};
     auto pc = std::make_unique<PluginConfig>();
     pc->mPluginType = PluginType::CPU_PROFILING;
     pc->mConfig = std::move(config);
@@ -55,7 +57,7 @@ int CpuProfilingManager::Init() {
     mInited = true;
     mEBPFAdapter->StartPlugin(
         PluginType::CPU_PROFILING,
-        buildCpuProfilingConfig({}, handleCpuProfilingEvent, this));
+        buildCpuProfilingConfig({}, {}, handleCpuProfilingEvent, this));
     ProcessDiscoveryManager::GetInstance()->Start([this](auto v) {
         HandleProcessDiscoveryEvent(std::move(v));
     });
@@ -211,12 +213,15 @@ void CpuProfilingManager::HandleCpuProfilingEvent(uint32_t pid,
         event->SetContentNoCopy(kCnt.LogKey(), StringView(cntSb.data, cntSb.size));
     }
 
-    for (auto& key : targets) {
-        auto it = mConfigInfoMap.find(key);
-        if (it == mConfigInfoMap.end()) {
+    auto it = targets.begin();
+    while (it != targets.end()) {
+        auto& key = *it;
+        auto it2 = mConfigInfoMap.find(key);
+        if (it2 == mConfigInfoMap.end()) {
+            it = targets.erase(it);
             continue;
         }
-        ConfigInfo& info = it->second;
+        ConfigInfo& info = it2->second;
 
         std::unique_ptr<ProcessQueueItem> item =
             std::make_unique<ProcessQueueItem>(
@@ -240,27 +245,39 @@ void CpuProfilingManager::HandleCpuProfilingEvent(uint32_t pid,
                 // TODO: Alarm discard data
             }
         }
+
+        it++;
     }
 };
 
 void CpuProfilingManager::HandleProcessDiscoveryEvent(ProcessDiscoveryManager::DiscoverResult result) {
-    std::unordered_set<uint32_t> totalPids;
+    std::unordered_set<uint32_t> mRemovePids;
+
     {
         std::lock_guard guard(mMutex);
-        mRouter.clear();
-        for (auto& [configKey, pids] : result) {
-            for (auto& pid : pids) {
-                totalPids.insert(pid);
+        for (auto& [configKey, entry] : result.mResultsPerConfig) {
+            auto& toAdd = entry.mPidsToAdd;
+            auto& toRemove = entry.mPidsToRemove;
+            for (auto& pid : toAdd) {
                 auto it = mRouter.emplace(pid, std::unordered_set<ConfigKey>{}).first;
                 auto& configSet = it->second;
                 configSet.insert(configKey);
+            }
+            for (auto& pid : toRemove) {
+                mRemovePids.insert(pid);
+                auto it = mRouter.emplace(pid, std::unordered_set<ConfigKey>{}).first;
+                auto& configSet = it->second;
+                configSet.erase(configKey);
             }
         }
     }
 
     mEBPFAdapter->UpdatePlugin(
         PluginType::CPU_PROFILING,
-        buildCpuProfilingConfig(std::move(totalPids), nullptr, nullptr));
+        buildCpuProfilingConfig(
+            std::move(result.mAddPidsToRoot),
+            std::move(mRemovePids),
+            nullptr, nullptr));
 }
 
 } // namespace ebpf
