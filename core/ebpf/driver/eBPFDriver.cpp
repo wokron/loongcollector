@@ -536,7 +536,7 @@ int update_plugin(logtail::ebpf::PluginConfig* arg) {
             auto *config = std::get_if<logtail::ebpf::CpuProfilingConfig>(&arg->mConfig);
             assert(config != nullptr);
             
-            gCpuProfiler->UpdatePids(std::move(config->mPids));
+            gCpuProfiler->UpdatePids(std::move(config->mPidsToAdd), std::move(config->mPidsToRemove));
             EBPF_LOG(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
                      "cpu profiling: profiler pids updated\n");
             break;

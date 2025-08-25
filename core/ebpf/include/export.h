@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 
 extern "C" {
 #include <coolbpf/net.h>
@@ -157,7 +158,8 @@ struct FileSecurityConfig {
 using CpuProfilingHandler = void (*)(uint32_t pid, const char *comm, const char *stack, uint32_t cnt, void *ctx);
 
 struct CpuProfilingConfig {
-    std::unordered_set<uint32_t> mPids;
+    std::unordered_map<uint32_t, std::string> mPidsToAdd;
+    std::unordered_set<uint32_t> mPidsToRemove;
     CpuProfilingHandler mHandler;
     void *mCtx;
 };

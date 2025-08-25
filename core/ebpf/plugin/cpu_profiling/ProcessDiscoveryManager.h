@@ -19,6 +19,7 @@
 #include <future>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "app_config/AppConfig.h"
 #include "common/LogtailCommonFlags.h"
@@ -52,8 +53,14 @@ struct ProcessDiscoveryConfig {
 
 class ProcessDiscoveryManager {
 public:
-    using DiscoverEntry = std::pair<size_t, std::set<uint32_t>>;
-    using DiscoverResult = std::vector<DiscoverEntry>;
+    struct Entry {
+        std::unordered_set<uint32_t> mPidsToAdd;
+        std::unordered_set<uint32_t> mPidsToRemove;
+    };
+    struct DiscoverResult {
+        std::vector<std::pair<size_t, Entry>> mResultsPerConfig;
+        std::unordered_map<uint32_t, std::string> mAddPidsToRoot;
+    };
     using NotifyFn = std::function<void(DiscoverResult)>;
     using UpdateFn = std::function<void(ProcessDiscoveryConfig&)>;
 
@@ -94,7 +101,27 @@ private:
 
     struct InnerState {
         ProcessDiscoveryConfig mConfig;
-        std::set<uint32_t> mPrevPids;
+        std::unordered_set<uint32_t> mPrevPids;
+
+        bool diffAndUpdate(std::unordered_set<uint32_t> pids, std::unordered_set<uint32_t> &toAdd, std::unordered_set<uint32_t> &toRemove) {
+            for (auto& pid : pids) {
+                if (mPrevPids.find(pid) == mPrevPids.end()) {
+                    toAdd.insert(pid);
+                }
+            }
+
+            for (auto& pid : mPrevPids) {
+                if (pids.find(pid) == pids.end()) {
+                    toRemove.insert(pid);
+                }
+            }
+
+            bool anyUpdate = !toAdd.empty() || !toRemove.empty();
+            if (anyUpdate) {
+                mPrevPids = std::move(pids);
+            }
+            return anyUpdate;
+        }
     };
 
     std::atomic_bool mRunning = false;
