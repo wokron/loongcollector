@@ -105,7 +105,7 @@ void ProcessDiscoveryManager::run() {
             for (auto &[_, state] : mStates) {
                 std::unordered_map<uint32_t, ProcessEntry*> matchedPids;
                 for (auto& proc : procs) {
-                    if (state.isMatch(proc.mCmdline, proc.mContainerId)) {
+                    if (state.isMatch(proc.mCmdline, proc.mContainerId, mIsContainerMode)) {
                         matchedPids.emplace(proc.mPid, &proc);
                     }
                 }
@@ -118,6 +118,65 @@ void ProcessDiscoveryManager::run() {
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void ProcessDiscoveryManager::InnerState::diffAndUpdate(const std::unordered_map<uint32_t, ProcessEntry*> &matchProcs, DiscoverResult &result) {
+    auto configKey = mConfig.mConfigKey;
+    Entry entry;
+    auto& toAdd = entry.mPidsToAdd;
+    auto& toRemove = entry.mPidsToRemove;
+
+    // remove
+    for (auto it = mPrevPids.begin(); it != mPrevPids.end(); ) {
+        auto& pid = *it;
+        if (matchProcs.find(pid) == matchProcs.end()) {
+            toRemove.insert(pid);
+            it = mPrevPids.erase(it);
+        } else {
+            it++;
+        }
+    }
+
+    // add
+    for (auto& [pid, procPtr] : matchProcs) {
+        auto& proc = *procPtr;
+        if (mPrevPids.find(pid) == mPrevPids.end()) {
+            toAdd.insert(pid);
+            mPrevPids.insert(pid);
+
+            std::string rootfsPath = "";
+            if (auto it = mContainerIdToRoot.find(proc.mContainerId); it != mContainerIdToRoot.end()) {
+                rootfsPath = it->second;
+            }
+            result.mAddPidsToRoot.emplace(pid, rootfsPath);
+        }
+    }
+
+    bool anyUpdate = !toAdd.empty() || !toRemove.empty();
+    if (anyUpdate) {
+        result.mResultsPerConfig.emplace_back(configKey, std::move(entry));
+    }
+}
+
+bool ProcessDiscoveryManager::InnerState::isMatch(
+    const std::string& cmdline, const std::string& containerId, bool isContainerMode) {
+    auto checkCmdlines = [&] {
+        if (mConfig.mFullDiscovery) {
+            return true;
+        }
+        for (auto& regex : mConfig.mRegexs) {
+            if (boost::regex_match(cmdline, regex)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    if (isContainerMode) {
+        return mContainerIdToRoot.find(containerId) != mContainerIdToRoot.end() && checkCmdlines();
+    } else {
+        return checkCmdlines();
     }
 }
 
