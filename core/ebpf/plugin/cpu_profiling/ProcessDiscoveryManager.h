@@ -56,7 +56,9 @@ public:
     };
     using NotifyFn = std::function<void(DiscoverResult)>;
 
-    ProcessDiscoveryManager() : mProcParser(GetContainerHostPath().value_or("/")) {}
+    ProcessDiscoveryManager()
+        : mIsContainerMode(AppConfig::GetInstance()->IsPurageContainerMode()),
+          mProcParser(GetContainerHostPath().value_or("/")) {}
 
     ProcessDiscoveryManager(const ProcessDiscoveryManager &) = delete;
     ProcessDiscoveryManager &operator=(const ProcessDiscoveryManager &) = delete;
@@ -91,58 +93,9 @@ private:
         std::unordered_set<uint32_t> mPrevPids;
         std::unordered_map<std::string, std::string> mContainerIdToRoot;
 
-        void diffAndUpdate(const std::unordered_map<uint32_t, ProcessEntry*> &matchProcs, DiscoverResult &result) {
-            auto configKey = mConfig.mConfigKey;
-            Entry entry;
-            auto& toAdd = entry.mPidsToAdd;
-            auto& toRemove = entry.mPidsToRemove;
+        void diffAndUpdate(const std::unordered_map<uint32_t, ProcessEntry*> &matchProcs, DiscoverResult &result);
 
-            // remove
-            for (auto it = mPrevPids.begin(); it != mPrevPids.end(); ) {
-                auto& pid = *it;
-                if (matchProcs.find(pid) == matchProcs.end()) {
-                    toRemove.insert(pid);
-                    it = mPrevPids.erase(it);
-                } else {
-                    it++;
-                }
-            }
-
-            // add
-            for (auto& [pid, procPtr] : matchProcs) {
-                auto& proc = *procPtr;
-                if (mPrevPids.find(pid) == mPrevPids.end()) {
-                    toAdd.insert(pid);
-                    mPrevPids.insert(pid);
-
-                    std::string rootfsPath = "";
-                    if (auto it = mContainerIdToRoot.find(proc.mContainerId); it != mContainerIdToRoot.end()) {
-                        rootfsPath = it->second;
-                    }
-                    result.mAddPidsToRoot.emplace(pid, rootfsPath);
-                }
-            }
-
-            bool anyUpdate = !toAdd.empty() || !toRemove.empty();
-            if (anyUpdate) {
-                result.mResultsPerConfig.emplace_back(configKey, std::move(entry));
-            }
-        }
-
-        bool isMatch(const std::string& cmdline, const std::string& containerId) {
-            if (mConfig.mFullDiscovery) {
-                return true;
-            }
-            for (auto& regex : mConfig.mRegexs) {
-                if (boost::regex_match(cmdline, regex)) {
-                    return true;
-                }
-            }
-            if (!containerId.empty()) {
-                return mContainerIdToRoot.find(containerId) != mContainerIdToRoot.end();
-            }
-            return false;
-        }
+        bool isMatch(const std::string& cmdline, const std::string& containerId, bool isContainerMode);
     };
 
     std::atomic_bool mRunning = false;
@@ -150,7 +103,8 @@ private:
     std::mutex mLock;
     std::unordered_map<std::string, InnerState> mStates;
     NotifyFn mCallback;
-    
+
+    bool mIsContainerMode;
     ProcParser mProcParser;
 };
 
