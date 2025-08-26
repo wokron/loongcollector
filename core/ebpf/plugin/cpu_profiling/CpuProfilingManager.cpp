@@ -24,11 +24,15 @@ namespace logtail {
 namespace ebpf {
 
 std::unique_ptr<PluginConfig>
-buildCpuProfilingConfig(std::unordered_map<uint32_t, std::string> pidsToAdd, std::unordered_set<uint32_t> pidsToRemove, CpuProfilingHandler handler,
+buildCpuProfilingConfig(std::unordered_map<uint32_t, std::string> pidsToAdd,
+                        std::unordered_set<uint32_t> pidsToRemove,
+                        std::optional<std::string> hostRootPath,
+                        CpuProfilingHandler handler,
                         void *ctx) {
     CpuProfilingConfig config = {
         .mPidsToAdd = std::move(pidsToAdd),
         .mPidsToRemove = std::move(pidsToRemove),
+        .mHostRootPath = std::move(hostRootPath),
         .mHandler = handler, .mCtx = ctx};
     auto pc = std::make_unique<PluginConfig>();
     pc->mPluginType = PluginType::CPU_PROFILING;
@@ -56,7 +60,7 @@ int CpuProfilingManager::Init() {
     mInited = true;
     mEBPFAdapter->StartPlugin(
         PluginType::CPU_PROFILING,
-        buildCpuProfilingConfig({}, {}, handleCpuProfilingEvent, this));
+        buildCpuProfilingConfig({}, {}, GetContainerHostPath(), handleCpuProfilingEvent, this));
     ProcessDiscoveryManager::GetInstance()->Start([this](auto v) {
         HandleProcessDiscoveryEvent(std::move(v));
     });
@@ -274,7 +278,7 @@ void CpuProfilingManager::HandleProcessDiscoveryEvent(ProcessDiscoveryManager::D
         buildCpuProfilingConfig(
             std::move(result.mAddPidsToRoot),
             std::move(mRemovePids),
-            nullptr, nullptr));
+            std::nullopt, nullptr, nullptr));
 }
 
 } // namespace ebpf
