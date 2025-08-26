@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <optional>
 
 #include "app_config/AppConfig.h"
 #include "common/LogtailCommonFlags.h"
@@ -36,6 +37,13 @@ struct ProcessDiscoveryConfig {
     bool mFullDiscovery = false;
 };
 
+inline std::optional<std::string> GetContainerHostPath() {
+    if (AppConfig::GetInstance()->IsPurageContainerMode()) {
+        return STRING_FLAG(default_container_host_path);
+    }
+    return std::nullopt;
+}
+
 class ProcessDiscoveryManager {
 public:
     struct Entry {
@@ -48,7 +56,7 @@ public:
     };
     using NotifyFn = std::function<void(DiscoverResult)>;
 
-    ProcessDiscoveryManager() : mProcParser(getProcParserPrefix()) {}
+    ProcessDiscoveryManager() : mProcParser(GetContainerHostPath().value_or("/")) {}
 
     ProcessDiscoveryManager(const ProcessDiscoveryManager &) = delete;
     ProcessDiscoveryManager &operator=(const ProcessDiscoveryManager &) = delete;
@@ -76,13 +84,6 @@ public:
     bool RemoveContainerInfo(const std::string &configName, const std::vector<std::string> &containerIds);
 
 private:
-    static std::string getProcParserPrefix() {
-        if (AppConfig::GetInstance()->IsPurageContainerMode()) {
-            return STRING_FLAG(default_container_host_path);
-        }
-        return "/";
-    }
-
     void run();
 
     struct InnerState {

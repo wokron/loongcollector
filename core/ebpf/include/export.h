@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
+#include <optional>
 
 extern "C" {
 #include <coolbpf/net.h>
@@ -162,6 +163,7 @@ using CpuProfilingHandler = void (*)(uint32_t pid, const char *comm, const char 
 struct CpuProfilingConfig {
     std::unordered_map<uint32_t, std::string> mPidsToAdd;
     std::unordered_set<uint32_t> mPidsToRemove;
+    std::optional<std::string> mHostRootPath;
     CpuProfilingHandler mHandler;
     void *mCtx;
 };
