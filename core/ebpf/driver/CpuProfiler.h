@@ -40,7 +40,7 @@ enum LivetraceCtrlOp {
 };
 
 int32_t livetrace_profiler_ctrl(struct Profiler *profiler, int op,
-                                const char *pids);
+                                const char *pids, const char* rootfs);
 
 using livetrace_profiler_read_cb_t = void (*)(uint32_t pid, const char *comm,
                                               const char *stack, uint32_t cnt);
@@ -93,29 +93,20 @@ public:
         assert(mProfiler != nullptr);
         std::lock_guard<std::mutex> lock(mMutex);
 
-        auto printToAdd = [&] {
-            std::string result;
-            for (auto& [pid, rootPath] : toAddWithRoot) {
-                result += std::to_string(pid) + ":" + rootPath;
-                result += ",";
+        if (!toAddWithRoot.empty()) {
+            std::string toAddStr, rootfsStr;
+            for (auto& [pid, path] : toAddWithRoot) {
+                if (!toAddStr.empty()) {
+                    toAddStr += ",";
+                    rootfsStr += ",";
+                }
+                toAddStr += std::to_string(pid);
+                rootfsStr += path;
             }
-            return result;
-        };
-        ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] toAddWithRoot: %s, toRemove: %s",
-                printToAdd().c_str(), pidsToString(toRemove).c_str());
-
-        std::unordered_set<uint32_t> toAdd;
-        for (auto& [pids, _] : toAddWithRoot) {
-            toAdd.insert(pids);
-        }
-
-        if (!toAdd.empty()) {
-            std::string toAddStr = pidsToString(toAdd);
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] add pids: %s", toAddStr.c_str());
+                "[CpuProfiler][UpdatePids] add pids: %s, rootfs paths: %s", toAddStr.c_str(), rootfsStr.c_str());
             livetrace_profiler_ctrl(mProfiler, LivetraceCtrlOp::LIVETRACE_ADD,
-                                    toAddStr.c_str());
+                                    toAddStr.c_str(), rootfsStr.c_str());
         }
 
         if (!toRemove.empty()) {
@@ -124,7 +115,7 @@ public:
                 "[CpuProfiler][UpdatePids] remove pids: %s", toRemoveStr.c_str());
             livetrace_profiler_ctrl(mProfiler,
                                     LivetraceCtrlOp::LIVETRACE_REMOVE,
-                                    toRemoveStr.c_str());
+                                    toRemoveStr.c_str(), nullptr);
         }
     }
 
