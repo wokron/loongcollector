@@ -405,7 +405,6 @@ bool LinuxSystemInterface::GetSystemInformationOnce(SystemInformation& systemInf
             break;
         }
     }
-    systemInfo.collectTime = steady_clock::now();
     return true;
 }
 
@@ -447,7 +446,6 @@ bool LinuxSystemInterface::GetCPUInformationOnce(CPUInformation& cpuInfo) {
             cpuInfo.stats.push_back(cpuStat);
         }
     }
-    cpuInfo.collectTime = steady_clock::now();
     return true;
 }
 
@@ -478,7 +476,6 @@ bool LinuxSystemInterface::GetProcessListInformationOnce(ProcessListInformation&
             }
         }
     }
-    processListInfo.collectTime = steady_clock::now();
     return true;
 }
 
@@ -490,7 +487,6 @@ bool LinuxSystemInterface::GetProcessInformationOnce(pid_t pid, ProcessInformati
         return false;
     }
     mProcParser.ParseProcessStat(pid, line, processInfo.stat);
-    processInfo.collectTime = steady_clock::now();
     return true;
 }
 
