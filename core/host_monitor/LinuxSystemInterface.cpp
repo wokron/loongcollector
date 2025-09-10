@@ -1079,7 +1079,7 @@ bool LinuxSystemInterface::GetProcessCredNameOnce(pid_t pid, ProcessCredName& pr
     passwd pwbuffer;
     char buffer[2048];
     if (getpwuid_r(cred.uid, &pwbuffer, buffer, sizeof(buffer), &pw) != 0 || pw == nullptr || pw->pw_name == nullptr) {
-        return false;
+        return true;
     }
 
     processCredName.user = pw->pw_name;
@@ -1088,7 +1088,7 @@ bool LinuxSystemInterface::GetProcessCredNameOnce(pid_t pid, ProcessCredName& pr
     group grpbuffer{};
     char groupBuffer[2048];
     if (getgrgid_r(cred.gid, &grpbuffer, groupBuffer, sizeof(groupBuffer), &grp) != 0) {
-        return false;
+        return true;
     }
 
     if (grp != nullptr && grp->gr_name != nullptr) {
@@ -1112,6 +1112,13 @@ bool LinuxSystemInterface::GetExecutablePathOnce(pid_t pid, ProcessExecutePath& 
 
 bool LinuxSystemInterface::GetProcessOpenFilesOnce(pid_t pid, ProcessFd& processFd) {
     std::filesystem::path procFdPath = PROCESS_DIR / std::to_string(pid) / PROCESS_FD;
+
+    // 检查目录是否存在，进程可能已经被杀死
+
+    if (!CheckExistance(procFdPath)) {
+        LOG_ERROR(sLogger, ("file does not exist", procFdPath.string()));
+        return false;
+    }
 
     int count = 0;
     for (const auto& dirEntry :
