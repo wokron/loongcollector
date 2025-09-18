@@ -15,10 +15,11 @@
 #pragma once
 
 #include <cassert>
+
 #include <mutex>
+#include <optional>
 #include <unordered_set>
 #include <vector>
-#include <optional>
 
 extern "C" {
 
@@ -26,30 +27,27 @@ void livetrace_enable_system_profiling(void);
 
 void livetrace_disable_symbolizer(void);
 
-int32_t livetrace_set_host_root_path(const char *path);
+int32_t livetrace_set_host_root_path(const char* path);
 
 struct Profiler;
 
-struct Profiler *livetrace_profiler_create(void);
+struct Profiler* livetrace_profiler_create(void);
 
-void livetrace_profiler_destroy(struct Profiler *profiler);
+void livetrace_profiler_destroy(struct Profiler* profiler);
 
 enum LivetraceCtrlOp {
     LIVETRACE_REMOVE = 0,
     LIVETRACE_ADD = 1,
 };
 
-int32_t livetrace_profiler_ctrl(struct Profiler *profiler, int op,
-                                const char *pids);
+int32_t livetrace_profiler_ctrl(struct Profiler* profiler, int op, const char* pids);
 
-using livetrace_profiler_read_cb_t = void (*)(uint32_t pid, const char *comm,
-                                              const char *stack, uint32_t cnt);
+using livetrace_profiler_read_cb_t = void (*)(uint32_t pid, const char* comm, const char* stack, uint32_t cnt);
 
-void livetrace_profiler_read(struct Profiler *profiler,
-                             livetrace_profiler_read_cb_t cb);
+void livetrace_profiler_read(struct Profiler* profiler, livetrace_profiler_read_cb_t cb);
 
-using livetrace_profiler_read_cb_ctx_t = void (*)(uint32_t pid, const char *comm,
-                                              const char *stack, uint32_t cnt, void *ctx);
+using livetrace_profiler_read_cb_ctx_t
+    = void (*)(uint32_t pid, const char* comm, const char* stack, uint32_t cnt, void* ctx);
 }
 
 namespace logtail {
@@ -61,7 +59,7 @@ public:
 
     ~CpuProfiler() { Stop(); }
 
-    void Start(livetrace_profiler_read_cb_ctx_t handler, void *ctx, std::optional<std::string> hostRootPath) {
+    void Start(livetrace_profiler_read_cb_ctx_t handler, void* ctx, std::optional<std::string> hostRootPath) {
         std::lock_guard<std::mutex> lock(mMutex);
         if (mProfiler == nullptr) {
             mProfiler = livetrace_profiler_create();
@@ -72,15 +70,16 @@ public:
                 livetrace_set_host_root_path(hostRootPath.value().c_str());
             }
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][Start] create profiler, handler: %p ctx: %p", handler, ctx);
+                     "[CpuProfiler][Start] create profiler, handler: %p ctx: %p",
+                     handler,
+                     ctx);
         }
     }
 
     void Stop() {
         std::lock_guard<std::mutex> lock(mMutex);
         if (mProfiler != nullptr) {
-            ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][Stop] destroy profiler");
+            ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG, "[CpuProfiler][Stop] destroy profiler");
             livetrace_profiler_destroy(mProfiler);
             mProfiler = nullptr;
         }
@@ -103,18 +102,17 @@ public:
         if (!toAdd.empty()) {
             std::string pidsToAdd = pidsToString(toAdd);
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] add pids: %s", pidsToAdd.c_str());
-            livetrace_profiler_ctrl(mProfiler, LivetraceCtrlOp::LIVETRACE_ADD,
-                                    pidsToAdd.c_str());
+                     "[CpuProfiler][UpdatePids] add pids: %s",
+                     pidsToAdd.c_str());
+            livetrace_profiler_ctrl(mProfiler, LivetraceCtrlOp::LIVETRACE_ADD, pidsToAdd.c_str());
         }
 
         if (!toRemove.empty()) {
             std::string pidsToRemove = pidsToString(toRemove);
             ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][UpdatePids] remove pids: %s", pidsToRemove.c_str());
-            livetrace_profiler_ctrl(mProfiler,
-                                    LivetraceCtrlOp::LIVETRACE_REMOVE,
-                                    pidsToRemove.c_str());
+                     "[CpuProfiler][UpdatePids] remove pids: %s",
+                     pidsToRemove.c_str());
+            livetrace_profiler_ctrl(mProfiler, LivetraceCtrlOp::LIVETRACE_REMOVE, pidsToRemove.c_str());
         }
 
         mPids = std::move(newPids);
@@ -127,19 +125,18 @@ public:
             return;
         }
 
-        ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG,
-                "[CpuProfiler][Poll] poll");
+        ebpf_log(logtail::ebpf::eBPFLogType::NAMI_LOG_TYPE_DEBUG, "[CpuProfiler][Poll] poll");
         livetrace_profiler_read(mProfiler, handler_without_ctx);
     }
 
 private:
-    static void handler_without_ctx(uint32_t pid, const char *comm, const char *stack, uint32_t cnt) {
+    static void handler_without_ctx(uint32_t pid, const char* comm, const char* stack, uint32_t cnt) {
         mHandler(pid, comm, stack, cnt, mCtx);
     }
 
-    static std::string pidsToString(const std::unordered_set<uint32_t> &pids) {
+    static std::string pidsToString(const std::unordered_set<uint32_t>& pids) {
         std::string result;
-        for (const auto &pid : pids) {
+        for (const auto& pid : pids) {
             if (!result.empty()) {
                 result += ",";
             }
@@ -148,16 +145,16 @@ private:
         return result;
     }
 
-    void compareSets(const std::unordered_set<uint32_t> &newPids,
-                     std::unordered_set<uint32_t> &toAdd,
-                     std::unordered_set<uint32_t> &toRemove) {
-        for (const auto &pid : newPids) {
+    void compareSets(const std::unordered_set<uint32_t>& newPids,
+                     std::unordered_set<uint32_t>& toAdd,
+                     std::unordered_set<uint32_t>& toRemove) {
+        for (const auto& pid : newPids) {
             if (mPids.find(pid) == mPids.end()) {
                 toAdd.insert(pid);
             }
         }
 
-        for (const auto &pid : mPids) {
+        for (const auto& pid : mPids) {
             if (newPids.find(pid) == newPids.end()) {
                 toRemove.insert(pid);
             }
@@ -166,10 +163,10 @@ private:
 
     std::mutex mMutex;
     std::unordered_set<uint32_t> mPids;
-    Profiler *mProfiler = nullptr;
+    Profiler* mProfiler = nullptr;
     // TODO: make this non-static
     inline static livetrace_profiler_read_cb_ctx_t mHandler = nullptr;
-    inline static void *mCtx = nullptr;
+    inline static void* mCtx = nullptr;
 };
 
 } // namespace ebpf

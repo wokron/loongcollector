@@ -14,18 +14,18 @@
 // limitations under the License.
 
 #include "plugin/input/InputCpuProfiling.h"
+
+#include "app_config/AppConfig.h"
 #include "collection_pipeline/CollectionPipeline.h"
 #include "ebpf/EBPFServer.h"
 #include "ebpf/include/export.h"
 #include "logger/Logger.h"
-#include "app_config/AppConfig.h"
 
 namespace logtail {
 
 const std::string InputCpuProfiling::sName = "input_cpu_profiling";
 
-bool InputCpuProfiling::Init(const Json::Value &config,
-                             Json::Value &optionalGoPipeline) {
+bool InputCpuProfiling::Init(const Json::Value& config, Json::Value& optionalGoPipeline) {
     // TODO: add metrics
     auto ok = mCpuProfilingOption.Init(config, mContext, sName);
     if (!ok) {
@@ -40,24 +40,24 @@ bool InputCpuProfiling::Init(const Json::Value &config,
 
 bool InputCpuProfiling::Start() {
     ebpf::EBPFServer::GetInstance()->Init();
-    if (!ebpf::EBPFServer::GetInstance()->IsSupportedEnv(
-            logtail::ebpf::PluginType::CPU_PROFILING)) {
+    if (!ebpf::EBPFServer::GetInstance()->IsSupportedEnv(logtail::ebpf::PluginType::CPU_PROFILING)) {
         return false;
     }
-    return ebpf::EBPFServer::GetInstance()->EnablePlugin(
-        mContext->GetConfigName(), mIndex,
-        logtail::ebpf::PluginType::CPU_PROFILING, mContext,
-        &mCpuProfilingOption, mPluginMetricPtr);
+    return ebpf::EBPFServer::GetInstance()->EnablePlugin(mContext->GetConfigName(),
+                                                         mIndex,
+                                                         logtail::ebpf::PluginType::CPU_PROFILING,
+                                                         mContext,
+                                                         &mCpuProfilingOption,
+                                                         mPluginMetricPtr);
 }
 
 bool InputCpuProfiling::Stop(bool isPipelineRemoving) {
     if (!isPipelineRemoving) {
-        return ebpf::EBPFServer::GetInstance()->SuspendPlugin(
-            mContext->GetConfigName(),
-            logtail::ebpf::PluginType::CPU_PROFILING);
+        return ebpf::EBPFServer::GetInstance()->SuspendPlugin(mContext->GetConfigName(),
+                                                              logtail::ebpf::PluginType::CPU_PROFILING);
     }
-    return ebpf::EBPFServer::GetInstance()->DisablePlugin(
-        mContext->GetConfigName(), logtail::ebpf::PluginType::CPU_PROFILING);
+    return ebpf::EBPFServer::GetInstance()->DisablePlugin(mContext->GetConfigName(),
+                                                          logtail::ebpf::PluginType::CPU_PROFILING);
 }
 
 } // namespace logtail

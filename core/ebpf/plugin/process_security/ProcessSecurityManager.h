@@ -72,8 +72,7 @@ public:
 
     int RemoveConfig(const std::string&) override;
 
-    std::unique_ptr<PluginConfig> GeneratePluginConfig(
-        [[maybe_unused]] const PluginOptions& options) override {
+    std::unique_ptr<PluginConfig> GeneratePluginConfig([[maybe_unused]] const PluginOptions& options) override {
         auto ebpfConfig = std::make_unique<PluginConfig>();
         ebpfConfig->mPluginType = PluginType::PROCESS_SECURITY;
         return ebpfConfig;

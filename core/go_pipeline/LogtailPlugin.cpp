@@ -279,7 +279,7 @@ int LogtailPlugin::SendPbV2(const char* configName,
     return pConfig->Send(std::string(pbBuffer, pbSize), shardHashStr, logstore) ? 0 : -1;
 }
 
-static void extractContainerIds(const Json::Value &allCmd, std::vector<std::string> &ids) {
+static void extractContainerIds(const Json::Value& allCmd, std::vector<std::string>& ids) {
     assert(ids.empty());
     if (allCmd.isNull()) {
         return;
@@ -322,9 +322,8 @@ int LogtailPlugin::ExecPluginCmd(
                 std::vector<std::string> ids;
                 extractContainerIds(jsonParams["AllCmd"], ids);
                 bool succ = ebpf::ProcessDiscoveryManager::GetInstance()->UpdateDiscovery(
-                    configNameStr, [&](ebpf::ProcessDiscoveryConfig& config) {
-                        config.mContainerIds.insert(ids.begin(), ids.end());
-                    });
+                    configNameStr,
+                    [&](ebpf::ProcessDiscoveryConfig& config) { config.mContainerIds.insert(ids.begin(), ids.end()); });
                 // this may happen because we stop the c++ input first, then the go pipeline
                 if (!succ) {
                     LOG_WARNING(sLogger, ("try to update a removed config, config", configNameStr));

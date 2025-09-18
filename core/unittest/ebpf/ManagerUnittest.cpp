@@ -104,9 +104,7 @@ void ManagerUnittest::TestProcessSecurityManagerBasic() {
     APSARA_TEST_EQUAL(manager->Init(), 0);
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
-    APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
-        0);
+    APSARA_TEST_EQUAL(manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Suspend(), 0);
@@ -148,9 +146,7 @@ void ManagerUnittest::TestFileSecurityManagerBasic() {
     APSARA_TEST_EQUAL(manager->Init(), 0);
     CollectionPipelineContext ctx;
     ctx.SetConfigName("test_config");
-    APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
-        0);
+    APSARA_TEST_EQUAL(manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     APSARA_TEST_EQUAL(manager->Suspend(), 0);
@@ -207,8 +203,7 @@ void ManagerUnittest::TestManagerConcurrency() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(processManager->Init(), 0);
-    processManager->AddOrUpdateConfig(
-        &ctx, 0, nullptr, PluginOptions(&options));
+    processManager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options));
     CollectionPipelineContext ctx2;
     ctx2.SetConfigName("test_config_file");
     APSARA_TEST_EQUAL(fileManager->Init(), 0);
@@ -270,9 +265,7 @@ void ManagerUnittest::TestNetworkSecurityManagerBasic() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
-        0);
+    APSARA_TEST_EQUAL(manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)), 0);
     APSARA_TEST_TRUE(manager->IsRunning());
 
     // 测试暂停
@@ -294,9 +287,7 @@ void ManagerUnittest::TestNetworkSecurityManagerEventHandling() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
-        0);
+    APSARA_TEST_EQUAL(manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)), 0);
 
     // 测试TCP连接事件
     auto connectEvent
@@ -356,9 +347,7 @@ void ManagerUnittest::TestNetworkSecurityManagerAggregation() {
     ctx.SetConfigName("test_config");
     SecurityOptions options;
     APSARA_TEST_EQUAL(manager->Init(), 0);
-    APSARA_TEST_EQUAL(
-        manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)),
-        0);
+    APSARA_TEST_EQUAL(manager->AddOrUpdateConfig(&ctx, 0, nullptr, PluginOptions(&options)), 0);
 
     // 创建多个相关的网络事件
     std::vector<std::shared_ptr<NetworkEvent>> events;

@@ -101,16 +101,13 @@ public:
     void AcceptNetStatsEvent(struct conn_stats_event_t* event);
     void AcceptDataEvent(struct conn_data_event_t* event);
 
-    std::unique_ptr<PluginConfig> GeneratePluginConfig(
-        [[maybe_unused]] const PluginOptions& options) override {
+    std::unique_ptr<PluginConfig> GeneratePluginConfig([[maybe_unused]] const PluginOptions& options) override {
         auto ebpfConfig = std::make_unique<PluginConfig>();
         ebpfConfig->mPluginType = PluginType::NETWORK_OBSERVE;
         return ebpfConfig;
     }
 
-    int Update([[maybe_unused]] const PluginOptions& options) override {
-        return 0;
-    }
+    int Update([[maybe_unused]] const PluginOptions& options) override { return 0; }
 
     int Suspend() override {
         mSuspendFlag = true;
