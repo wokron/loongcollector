@@ -194,7 +194,7 @@ static void addContentToEvent(LogEvent *event, SourceBuffer *sourceBuffer,
     std::string name = fullStack.back();
     std::string stack; // stack without the top function name
 
-    for (size_t i = fullStack.size() - 2; i >= 0; i--) {
+    for (ssize_t i = fullStack.size() - 2; i >= 0; i--) {
         stack += fullStack[i];
         if (i != 0) {
             stack += "\n";
@@ -215,6 +215,14 @@ static void addContentToEvent(LogEvent *event, SourceBuffer *sourceBuffer,
     event->SetContent("units", std::string("nanoseconds"));
     event->SetContent("value", std::string("1"));
     event->SetContent("valueType", std::string("cpu"));
+
+    std::string label;
+    label += "{";
+    label += "\"__name__\": \"";
+    label += "mall-cart-server";
+    label += "\"}";
+
+    event->SetContent("labels", label);
 }
 
 void CpuProfilingManager::HandleCpuProfilingEvent(uint32_t pid,
