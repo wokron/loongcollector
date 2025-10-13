@@ -218,7 +218,7 @@ static void addContentToEvent(LogEvent *event, SourceBuffer *sourceBuffer,
 
     std::string label;
     label += "{";
-    label += "\"__name__\": \"";
+    label += "__name__: \"";
     label += "mall-cart-server";
     label += "\"}";
 
