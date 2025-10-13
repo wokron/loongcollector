@@ -213,8 +213,8 @@ static void addContentToEvent(LogEvent *event, SourceBuffer *sourceBuffer,
 
     event->SetContent("type", std::string("profile_cpu"));
     event->SetContent("units", std::string("nanoseconds"));
-    event->SetContent("value", std::string("1"));
-    event->SetContent("valueType", std::string("cpu"));
+    event->SetContent("val", std::string("1"));
+    event->SetContent("valueTypes", std::string("cpu"));
 
     std::string label;
     label += "{";
